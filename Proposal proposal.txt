@@ -8,6 +8,7 @@ Mögliche Features
 - Vorkommen bestimmter "Kennworte" im Satz
 	- evtl. kommen "Nei" oder "Nid" vor welche ein ganz starker Indikator sein könnten
 - Häufigkeiten nur über Selbstlaute oder Bi-gramme welche Selbstlaute enthalten
+- Calgary Algorithm
 
 Methodik:
 Probiere Verschiedene Klassifier in scikit aus (http://scikit-learn.org/stable/supervised_learning.html)
