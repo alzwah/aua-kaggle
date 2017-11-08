@@ -1,0 +1,28 @@
+Proposal proposal
+
+Basierend auf n-Gramm Spracherkennung
+
+Mögliche Features
+- N-gramme für verschiedene N
+- Anteil Selbstlaute pro Zeichen eines Wortes
+- Vorkommen bestimmter "Kennworte" im Satz
+	- evtl. kommen "Nei" oder "Nid" vor welche ein ganz starker Indikator sein könnten
+- Häufigkeiten nur über Selbstlaute oder Bi-gramme welche Selbstlaute enthalten
+
+
+Methodik:
+Probiere Verschiedene Klassifier in scikit aus (http://scikit-learn.org/stable/supervised_learning.html)
+	- Grid search über alle Classifier
+	- Versuche die Anzahl der betrachteten Features zu limitieren wo es dafür parameter gibt
+	- Von Hand Features ein/ausschalten. Evtl ist eine Gruppe von Features v.a. Noise
+	- Es gibt voting classifiers. Man könnte versuchen für verschiedene Subsets von Features
+	 den jeweils besten Classifier zu finden und aus mehreren von diesen einen Voting classifier zu basteln
+
+Falls noch Zeit ist, könnte man versuchen auf vielversprechenden Features ein Neuronales Netz von Hand zu bauen
+	-> Z.B. Lasagne (and hope for the best).
+		Features insbesondere n-Gramme (e.g. eine spalte anzahl vorkommen von bigramm "ss" )
+
+
+Zusätzliche Ideen
+	- Evtl. sind einige Dialekte im Set viel häufiger als andere. -> Falls ja, versuche Daten zu finden s.d. Lernmaterial ausgeglichener
+	- 
