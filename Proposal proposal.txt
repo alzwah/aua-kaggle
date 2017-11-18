@@ -13,7 +13,7 @@ Mögliche Features:
 Methodik:
 Probiere Verschiedene Klassifier in scikit aus (http://scikit-learn.org/stable/supervised_learning.html)
 	- Grid search über alle Classifier
-	- Versuche die Anzahl der betrachteten Features zu limitieren wo es dafür Parameter gibt
+	- Eine Auswahl von betrachteten Features treffen mit Hilfe von select_k_best
 	- Von Hand Features ein/ausschalten. Evtl ist eine Gruppe von Features v.a. Noise
 	- Es gibt Voting classifiers. Man könnte versuchen für verschiedene Subsets von Features
 	 den jeweils besten Classifier zu finden und aus mehreren von diesen einen Voting classifier zu basteln
