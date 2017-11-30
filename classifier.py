@@ -4,6 +4,7 @@
 
 import csv
 import random
+import re
 import pandas as pd
 import numpy as np
 import argparse
@@ -122,6 +123,75 @@ def cross_validate(train_data, k):
 	# create pretty output
 	for pipeline, name in pipelines:
 		print(name+":", "\taverage accuracy:", scores[name]/folds)
+		
+
+# takes panda dataframe
+# gets training data, returns n-best calgary tokens
+def calgary(data_in):
+    #contains tuples of the form (category, sentence)
+    category_text = [(c,s) for c,s in zip(data_in['Label'].values, data_in['Text'].values)]
+    # tokenize sentences
+    category_tokens = []
+    for elem in category_text:
+        tokens = elem[1].split(" ")
+        category_tokens.append((elem[0], tokens))
+    
+    # structure: {category: freq}
+    term_freq = {}
+    # structure: {(category, token):freq}
+    term_freq_per_category = {}
+    term_count = 0
+    term_count_per_category = {'BE':0, 'BS':0, 'LU': 0, 'ZH':0}
+    
+    for cat, text in category_tokens:
+        for token in text:            
+            if token in term_freq.keys():
+                term_freq[token] += 1
+            else:
+                term_freq[token] = 1
+            if (cat, token) in term_freq_per_category.keys():
+                term_freq_per_category[(cat, token)] += 1
+            else:
+                term_freq_per_category[(cat,token)] = 1
+                
+            term_count += 1
+            term_count_per_category[cat] += 1
+            
+    #structure: [(calgary value, tok)]
+    output = []
+    
+    print(term_count_per_category)
+    for tok, freq in term_freq.items():
+        if freq > 2:
+            # lol sorry für ds statement
+             # max(probability t given category: termfrequency in category/total amount of terms in category)
+            oberer_bruch = max((get_term_freq_per_cat(term_freq_per_category, 'BE', tok)/term_count_per_category['BE']), (get_term_freq_per_cat(term_freq_per_category, 'BS', tok)/term_count_per_category['BS']), (get_term_freq_per_cat(term_freq_per_category, 'LU', tok)/term_count_per_category['LU']), (get_term_freq_per_cat(term_freq_per_category, 'ZH', tok)/term_count_per_category['ZH']))
+            # probability term: termfrequency/total amount of terms
+            unterer_bruch = freq/term_count
+            output.append((oberer_bruch/unterer_bruch, tok))
+    
+    sorted_output = sorted(output, reverse=True)
+    #returns 50 best calgary tokens
+    return([tok for val, tok in sorted_output[:49]])
+    
+    
+
+def get_term_freq_per_cat(dict, cat, token):
+    if (cat, token) in dict.keys():
+        return dict[(cat,token)]
+    else:
+        return 0
+    
+# takes sentence and calgary-list and returns all the words that match from the list
+def map_calgary(sentence, c_list):
+    output = []
+    for tok in c_list:
+        if re.search(tok, sentence):
+            output.append(tok)
+            
+    return output
+        
+    
 
 def classify(train_data,test_data):
 
@@ -157,26 +227,29 @@ def classify(train_data,test_data):
 def main():
 	train_data = read_csv(trainfile)
 	test_data = read_csv(testfile)
+	calgary_tokens = calgary(train_data, "test")
+		
+	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column 
 
-	# predictions = classify(train_data,test_data)
-	# write_scores(resultfile,predictions)
+	#predictions = classify(train_data,test_data)
+	#write_scores(resultfile,predictions)
 
-	# cross_validate(train_data=train_data, k=3)
+	#cross_validate(train_data=train_data, k=3)
 
-	grid_search(
-		par={
-			"count_vectorizer__ngram_range": [(1, 4), (1,6), (1,8)]
-			# "count_vectorizer__analyzer": ['char', 'char_wb']
-			# "count_vectorizer__stop_words": [[], ['uf, in, aber, a']], # ohni isch besser lol
-			# "count_vectorizer__token_pattern": ['(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b', '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
-			# "count_vectorizer__max_features": [None, 1000, 100] # None
-		},
-		pipeline= Pipeline([
-			('count_vectorizer', CountVectorizer(analyzer="char", token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b')),
-			('classifier', MultinomialNB())
-		]),
-		train_data=train_data
-	)
+	#grid_search(
+	#	par={
+	#		"count_vectorizer__ngram_range": [(1, 4), (1,6), (1,8)]
+	#		# "count_vectorizer__analyzer": ['char', 'char_wb']
+	#		# "count_vectorizer__stop_words": [[], ['uf, in, aber, a']], # ohni isch besser lol
+	#		# "count_vectorizer__token_pattern": ['(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b', '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
+	#		# "count_vectorizer__max_features": [None, 1000, 100] # None
+	#	},
+	#	pipeline= Pipeline([
+	#		('count_vectorizer', CountVectorizer(analyzer="char", token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b')),
+	#		('classifier', MultinomialNB())
+	#	]),
+	#	train_data=train_data
+	#)
 
 
 if __name__ == '__main__':
