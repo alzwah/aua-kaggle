@@ -213,56 +213,83 @@ def classify(train_data,test_data):
 	# 	('classifier', MultinomialNB())
 	# 	])
 
+
 	transformer = [
 			('subpipeline_calgary', Pipeline([
 				('selector',DataFrameColumnExtracter('calgarymatches')),
-				('label encoder',LabelEncoder())
+				('label encoder',TfidfVectorizer())
 			])),
 			('subpipeline_text', Pipeline([
 				('selector', DataFrameColumnExtracter('Text')),
 				('tfidf',TfidfVectorizer())
-				]))
+				])),
 
-			#('subpipeline_countvec', Pipeline([
-			#	('selector',DataFrameColumnExtracter('Text')),
-			#	('count_vectorizer', CountVectorizer(analyzer="char_wb",token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',ngram_range=(1,4)))])
-			
-			#)]
+
+			('subpipeline_countvec', Pipeline([
+				('selector',DataFrameColumnExtracter('Text')),
+				('count_vectorizer', CountVectorizer(analyzer="char_wb",token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',ngram_range=(1,4)))]))
+
 			]
+			
 
+
+	pipeline_Multinomial = Pipeline([
+			('union', FeatureUnion(transformer_list = transformer)),
+			('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
+			])
 
 	pipeline = Pipeline([
-		('union', FeatureUnion(
-
-			transformer_list = transformer
-
-			)),
-		('classifier', MultinomialNB())
-	])
+			('union', FeatureUnion(transformer_list = transformer)),
+			('clf', KNeighborsClassifier(n_neighbors = 15))
+			])
 
 	#train_text = train_data['Text'].values
 	#train_y = train_data['Label'].values
 	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
 	#test_text = test_data['Text'].values
+	k_fold = KFold(n_splits=3)
+	for train_indices, test_indices in k_fold.split(train_data):
 
+
+			train_text = train_data.iloc[train_indices]
+			train_y = train_data.iloc[train_indices]['Label'].values.astype(str)
+			train_text.drop('Label',axis=1)
+
+			test_text = train_data.iloc[test_indices]
+			test_y = train_data.iloc[test_indices]['Label'].values.astype(str)
+			test_text.drop('Label',axis=1)
 
 	
+			pipeline.fit(train_text,train_y)
+
+			
+			prediction = pipeline.predict(test_text)
+			print(accuracy_score(test_y,prediction))
+
+
+
+	""" UM MIT TESTDATA ZU ARBEITEN:
+	
 	train_y = train_data['Label'].values.astype(str)
-	train_text = train_data.drop('Label',axis=1)
+	train_text = train_data
 
 	test_text = test_data
 
-	
+	print(train_data)
+	print(test_data)
 	pipeline.fit(train_data,train_y)
 	predictions = pipeline.predict(test_text)
+	print(predictions)
 
 	for i in range(0,len(predictions)):
-		print(predictions[i], test_text[i])
+		print(predictions[i], test_text['Text'].iloc[i])
 
-	#print(accuracy_score(test_y,predictions))
+	#
 
-	return predictions
+	"""
+
+	return prediction
 
 
 def main():
@@ -284,7 +311,7 @@ def main():
 	#train_data.drop('Id',axis=1)
 	print(list(test_data))
 	print(list(train_data))
-	classify(train_data,test_data)
+	predictions = classify(train_data,test_data)
 
 
 
@@ -296,7 +323,7 @@ def main():
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column 
 
 	#predictions = classify(train_data,test_data)
-	#write_scores(resultfile,predictions)
+	write_scores(resultfile,predictions)
 
 	
 
