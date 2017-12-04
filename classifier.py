@@ -36,6 +36,17 @@ trainfile = arguments.trainfile
 testfile = arguments.testfile
 resultfile = arguments.resultfile
 
+# s
+class DataFrameColumnExtracter(TransformerMixin):
+
+	def __init__(self, column):
+		self.column = column
+	
+	def fit(self, X, y=None):
+		return self
+
+	def transform(self, X, y=None):
+		return X[self.column]
 
 def read_csv(filename):
 	data = pd.read_csv(filename,encoding='latin-1')
