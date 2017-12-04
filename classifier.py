@@ -10,9 +10,11 @@ import numpy as np
 import argparse
 import codecs
 
+
+from sklearn.base import TransformerMixin
 from sklearn.metrics import accuracy_score
 from sklearn.feature_selection import SelectKBest,f_classif
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB,MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -211,22 +213,48 @@ def classify(train_data,test_data):
 	# 	('classifier', MultinomialNB())
 	# 	])
 
+	transformer = [
+			('subpipeline_calgary', Pipeline([
+				('selector',DataFrameColumnExtracter('calgarymatches')),
+				('label encoder',LabelEncoder())
+			])),
+			('subpipeline_text', Pipeline([
+				('selector', DataFrameColumnExtracter('Text')),
+				('tfidf',TfidfVectorizer())
+				]))
+
+			#('subpipeline_countvec', Pipeline([
+			#	('selector',DataFrameColumnExtracter('Text')),
+			#	('count_vectorizer', CountVectorizer(analyzer="char_wb",token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',ngram_range=(1,4)))])
+			
+			#)]
+			]
+
+
 	pipeline = Pipeline([
-		('count_vectorizer', CountVectorizer(
-			analyzer="char_wb",
-			token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',
-			ngram_range=(1,4),
-		)),
+		('union', FeatureUnion(
+
+			transformer_list = transformer
+
+			)),
 		('classifier', MultinomialNB())
 	])
 
-	train_text = train_data['Text'].values
-	train_y = train_data['Label'].values
-	print(test_data)
+	#train_text = train_data['Text'].values
+	#train_y = train_data['Label'].values
+	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
-	test_text = test_data['Text'].values
+	#test_text = test_data['Text'].values
+
+
 	
-	pipeline.fit(train_text,train_y)
+	train_y = train_data['Label'].values.astype(str)
+	train_text = train_data.drop('Label',axis=1)
+
+	test_text = test_data
+
+	
+	pipeline.fit(train_data,train_y)
 	predictions = pipeline.predict(test_text)
 
 	for i in range(0,len(predictions)):
@@ -234,16 +262,43 @@ def classify(train_data,test_data):
 
 	#print(accuracy_score(test_y,predictions))
 
-	return predictions			
+	return predictions
+
+
 def main():
 	train_data = read_csv(trainfile)
 	test_data = read_csv(testfile)
-	calgary_tokens = calgary(train_data, "test")
+	calgary_tokens = calgary(train_data)
+	train_map = train_data.copy()
+	train_map['Text'].apply(map_calgary,c_list=calgary_tokens)
+	train_map = train_map.rename(columns={'Text':'calgarymatches'})
+
+	train_data = train_data.join(train_map['calgarymatches'])
+
+
+	test_map = test_data.copy()
+	test_map['Text'].apply(map_calgary,c_list=calgary_tokens)
+	test_map = test_map.rename(columns={'Text':'calgarymatches'})
+
+	test_data = test_data.join(test_map['calgarymatches'])
+	#train_data.drop('Id',axis=1)
+	print(list(test_data))
+	print(list(train_data))
+	classify(train_data,test_data)
+
+
+
+
+
+
+
 		
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column 
 
 	#predictions = classify(train_data,test_data)
 	#write_scores(resultfile,predictions)
+
+	
 
 	#cross_validate(train_data=train_data, k=3)
 
