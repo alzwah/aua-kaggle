@@ -205,13 +205,24 @@ def get_term_freq_per_cat(dict, cat, token):
     
 # takes sentence and calgary-list and returns all the words that match from the list
 def map_calgary(sentence, c_list):
+    # Proposition:
+    output = ""
+    for tok in c_list:
+        if re.search('\W'+tok+'\W', sentence):
+            if output != "":
+                output = output + " " + tok
+            else:
+                output = tok
+    return output
+
+    # Old code:
     output = []
     for tok in c_list:
         if re.search(tok, sentence):
             output.append(tok)
-            
+
     return output
-        
+
     
 
 def classify(train_data,test_data):
@@ -223,10 +234,10 @@ def classify(train_data,test_data):
 
 
     transformer = [
-            # ('subpipeline_calgary', Pipeline([
-            #     ('selector',DataFrameColumnExtracter('calgarymatches')),
-            #     ('label encoder',TfidfVectorizer())
-            # ])),
+            ('subpipeline_calgary', Pipeline([
+                ('selector',DataFrameColumnExtracter('calgarymatches')),
+                ('label encoder',TfidfVectorizer())
+            ])),
             # ('subpipeline_averagewordlength', Pipeline([
             #     ('selector', DataFrameColumnExtracter('averagewordlength')),
             # ])), # does not work for a reason unknown to Petra.
@@ -335,9 +346,10 @@ def main():
     test_data_transformed = test_data_transformed.join(test_map['averagewordlength'])
 
     # print some of the topmost data to show created features and their values
-    print(test_data_transformed.head(4))
+    print(test_data_transformed.head(30))
     print("------")
-    print(train_data_transformed.head(4))
+    print(train_data_transformed.head(30))
+
 
     # Classify
     #train_data.drop('Id',axis=1)
@@ -347,7 +359,7 @@ def main():
 
     # TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
 
-    #predictions = classify(train_data,test_data)
+    # predictions = classify(train_data,test_data)
     write_scores(resultfile,predictions)
 
 
