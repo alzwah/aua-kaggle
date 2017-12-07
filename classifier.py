@@ -41,102 +41,102 @@ resultfile = arguments.resultfile
 # s
 class DataFrameColumnExtracter(TransformerMixin):
 
-	def __init__(self, column):
-		self.column = column
-	
-	def fit(self, X, y=None):
-		return self
+    def __init__(self, column):
+        self.column = column
 
-	def transform(self, X, y=None):
-		return X[self.column]
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        return X[self.column]
 
 def read_csv(filename):
-	data = pd.read_csv(filename,encoding='latin-1')
-	return data
+    data = pd.read_csv(filename,encoding='latin-1')
+    return data
 
 def write_scores(filename,predictions):
-	predictions = [(i+1,j) for i,j in enumerate(predictions)]
-	with open(filename,'w') as resultof:
-		csv_writer = csv.writer(resultof,delimiter=",")
-		csv_writer.writerow(['Id','Prediction'])
-		for id_,pred in predictions:
-			csv_writer.writerow([id_,pred])
+    predictions = [(i+1,j) for i,j in enumerate(predictions)]
+    with open(filename,'w') as resultof:
+        csv_writer = csv.writer(resultof,delimiter=",")
+        csv_writer.writerow(['Id','Prediction'])
+        for id_,pred in predictions:
+            csv_writer.writerow([id_,pred])
 
 def grid_search(pipeline, par, train_data):
-	"""
-	Fine tune the parameters par with regards to the model in pipeline.
-	Returns the classifier with the best parameter combination.
-	Displays the possible parameters that can be used in par when executed.
-	"""
-	# Example for parameters: par={"count_vectorizer__ngram_range": [(2, 3), (1, 3)]}
+    """
+    Fine tune the parameters par with regards to the model in pipeline.
+    Returns the classifier with the best parameter combination.
+    Displays the possible parameters that can be used in par when executed.
+    """
+    # Example for parameters: par={"count_vectorizer__ngram_range": [(2, 3), (1, 3)]}
 
-	print("###### [Grid search]", pipeline.named_steps)
-	print("[Grid search]Supported Parameters:")
-	print(pipeline.get_params().keys())
+    print("###### [Grid search]", pipeline.named_steps)
+    print("[Grid search]Supported Parameters:")
+    print(pipeline.get_params().keys())
 
-	train_x = train_data['Text'].values
-	train_y = train_data['Label'].values
+    train_x = train_data['Text'].values
+    train_y = train_data['Label'].values
 
-	gs = GridSearchCV(pipeline, par, n_jobs=3, cv=10, verbose=True)
-	gs.fit(train_x, train_y)
+    gs = GridSearchCV(pipeline, par, n_jobs=3, cv=10, verbose=True)
+    gs.fit(train_x, train_y)
 
-	print("[Grid search] Cross validation finished.")
+    print("[Grid search] Cross validation finished.")
 
-	print("[Grid search] Best parameters:")
-	best_parameters = gs.best_estimator_.get_params()
-	for param_name in sorted(par.keys()):
-		print("\t%s: %r" % (param_name, best_parameters[param_name]))
+    print("[Grid search] Best parameters:")
+    best_parameters = gs.best_estimator_.get_params()
+    for param_name in sorted(par.keys()):
+        print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
-	return gs.best_estimator_
+    return gs.best_estimator_
 
 def cross_validate(train_data, k):
-	pipelines = [
-		(Pipeline([
-			('count_vectorizer', TfidfVectorizer()),
-			('classifier', MultinomialNB())
-		]), "MultinomialNB, Tfidf vectorizer"),
-		(Pipeline([
-			('count_vectorizer', CountVectorizer(
-				analyzer="char_wb",
-				token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',
-				ngram_range=(1,4),
-			)),
-			('classifier', MultinomialNB())
-		]), "MultinomialNB, count vectorizer")
-	]
+    pipelines = [
+        (Pipeline([
+            ('count_vectorizer', TfidfVectorizer()),
+            ('classifier', MultinomialNB())
+        ]), "MultinomialNB, Tfidf vectorizer"),
+        (Pipeline([
+            ('count_vectorizer', CountVectorizer(
+                analyzer="char_wb",
+                token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',
+                ngram_range=(1,4),
+            )),
+            ('classifier', MultinomialNB())
+        ]), "MultinomialNB, count vectorizer")
+    ]
 
-	scores = {}
-	for pipeline, name in pipelines:
-		scores[name] = 0
+    scores = {}
+    for pipeline, name in pipelines:
+        scores[name] = 0
 
-	# train models with 10-fold cross-validation for performance comparison
-	kf = KFold(n_splits=k, shuffle=False)
-	folds = 0
-	# Split data into train and test set
-	for train, test in kf.split(train_data['Text'].values,train_data['Label'] ):
-		folds += 1
-		print("Fold:", folds)
+    # train models with 10-fold cross-validation for performance comparison
+    kf = KFold(n_splits=k, shuffle=False)
+    folds = 0
+    # Split data into train and test set
+    for train, test in kf.split(train_data['Text'].values,train_data['Label'] ):
+        folds += 1
+        print("Fold:", folds)
 
-		x_train = train_data['Text'].values[train]
-		x_test = train_data['Text'].values[test]
-		y_train = train_data['Label'].values[train]
-		y_test = train_data['Label'].values[test]
+        x_train = train_data['Text'].values[train]
+        x_test = train_data['Text'].values[test]
+        y_train = train_data['Label'].values[train]
+        y_test = train_data['Label'].values[test]
 
-		for pipeline, name in pipelines:
+        for pipeline, name in pipelines:
 
-			pipeline.fit(x_train, y_train)
-			predictions = pipeline.predict(x_test)
+            pipeline.fit(x_train, y_train)
+            predictions = pipeline.predict(x_test)
 
-			new_score = accuracy_score(y_true=y_test, y_pred=predictions)
+            new_score = accuracy_score(y_true=y_test, y_pred=predictions)
 
-			scores[name] = scores[name] + new_score
-			print(name + ": ", new_score, scores[name]/folds)
-		print()
+            scores[name] = scores[name] + new_score
+            print(name + ": ", new_score, scores[name]/folds)
+        print()
 
-	# create pretty output
-	for pipeline, name in pipelines:
-		print(name+":", "\taverage accuracy:", scores[name]/folds)
-		
+    # create pretty output
+    for pipeline, name in pipelines:
+        print(name+":", "\taverage accuracy:", scores[name]/folds)
+
 
 # takes panda dataframe
 # gets training data, returns n-best calgary tokens
@@ -186,8 +186,16 @@ def calgary(data_in):
     sorted_output = sorted(output, reverse=True)
     #returns 50 best calgary tokens
     return([tok for val, tok in sorted_output[:49]])
-    
-    
+
+
+def average_word_length(sentence_in):
+    sum = 0.0
+    count = 0
+    for word in sentence_in.split(sep=" "):
+        sum += len(word)
+        count += 1
+    return sum/count
+
 
 def get_term_freq_per_cat(dict, cat, token):
     if (cat, token) in dict.keys():
@@ -208,142 +216,159 @@ def map_calgary(sentence, c_list):
 
 def classify(train_data,test_data):
 
-	# pipeline = Pipeline([
-	# 	('count_vectorizer', TfidfVectorizer()),
-	# 	('classifier', MultinomialNB())
-	# 	])
+    # pipeline = Pipeline([
+    # 	('count_vectorizer', TfidfVectorizer()),
+    # 	('classifier', MultinomialNB())
+    # 	])
 
 
-	transformer = [
-			('subpipeline_calgary', Pipeline([
-				('selector',DataFrameColumnExtracter('calgarymatches')),
-				('label encoder',TfidfVectorizer())
-			])),
-			('subpipeline_text', Pipeline([
-				('selector', DataFrameColumnExtracter('Text')),
-				('tfidf',TfidfVectorizer())
-				])),
+    transformer = [
+            # ('subpipeline_calgary', Pipeline([
+            #     ('selector',DataFrameColumnExtracter('calgarymatches')),
+            #     ('label encoder',TfidfVectorizer())
+            # ])),
+            # ('subpipeline_averagewordlength', Pipeline([
+            #     ('selector', DataFrameColumnExtracter('averagewordlength')),
+            # ])), # does not work for a reason unknown to Petra.
+            ('subpipeline_text', Pipeline([
+                ('selector', DataFrameColumnExtracter('Text')),
+                ('tfidf',TfidfVectorizer())
+                ])),
+            ('subpipeline_countvec', Pipeline([
+                ('selector',DataFrameColumnExtracter('Text')),
+                ('count_vectorizer', CountVectorizer(analyzer="char_wb",token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',ngram_range=(1,4)))]))
+
+            ]
+
+    pipeline_Multinomial = Pipeline([
+            ('union', FeatureUnion(transformer_list = transformer)),
+            ('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
+            ])
+
+    pipeline = Pipeline([
+            ('union', FeatureUnion(transformer_list = transformer)),
+            ('clf', KNeighborsClassifier(n_neighbors = 15))
+            ])
+
+    #train_text = train_data['Text'].values
+    #train_y = train_data['Label'].values
+    #print(test_data)
+    #im test file von der web site hat es einen whitespace vor 'Text'
+    #test_text = test_data['Text'].values
+    k_fold = KFold(n_splits=3)
+    for train_indices, test_indices in k_fold.split(train_data):
 
 
-			('subpipeline_countvec', Pipeline([
-				('selector',DataFrameColumnExtracter('Text')),
-				('count_vectorizer', CountVectorizer(analyzer="char_wb",token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',ngram_range=(1,4)))]))
+            train_text = train_data.iloc[train_indices]
+            train_y = train_data.iloc[train_indices]['Label'].values.astype(str)
+            train_text.drop('Label',axis=1)
 
-			]
-			
-
-
-	pipeline_Multinomial = Pipeline([
-			('union', FeatureUnion(transformer_list = transformer)),
-			('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
-			])
-
-	pipeline = Pipeline([
-			('union', FeatureUnion(transformer_list = transformer)),
-			('clf', KNeighborsClassifier(n_neighbors = 15))
-			])
-
-	#train_text = train_data['Text'].values
-	#train_y = train_data['Label'].values
-	#print(test_data)
-	#im test file von der web site hat es einen whitespace vor 'Text'
-	#test_text = test_data['Text'].values
-	k_fold = KFold(n_splits=3)
-	for train_indices, test_indices in k_fold.split(train_data):
+            test_text = train_data.iloc[test_indices]
+            test_y = train_data.iloc[test_indices]['Label'].values.astype(str)
+            test_text.drop('Label',axis=1)
 
 
-			train_text = train_data.iloc[train_indices]
-			train_y = train_data.iloc[train_indices]['Label'].values.astype(str)
-			train_text.drop('Label',axis=1)
+            pipeline.fit(train_text,train_y)
 
-			test_text = train_data.iloc[test_indices]
-			test_y = train_data.iloc[test_indices]['Label'].values.astype(str)
-			test_text.drop('Label',axis=1)
 
-	
-			pipeline.fit(train_text,train_y)
-
-			
-			prediction = pipeline.predict(test_text)
-			print(accuracy_score(test_y,prediction))
+            prediction = pipeline.predict(test_text)
+            print(accuracy_score(test_y,prediction))
 
 
 
-	""" UM MIT TESTDATA ZU ARBEITEN:
-	
-	train_y = train_data['Label'].values.astype(str)
-	train_text = train_data
+    """ UM MIT TESTDATA ZU ARBEITEN:
+    
+    train_y = train_data['Label'].values.astype(str)
+    train_text = train_data
 
-	test_text = test_data
+    test_text = test_data
 
-	print(train_data)
-	print(test_data)
-	pipeline.fit(train_data,train_y)
-	predictions = pipeline.predict(test_text)
-	print(predictions)
+    print(train_data)
+    print(test_data)
+    pipeline.fit(train_data,train_y)
+    predictions = pipeline.predict(test_text)
+    print(predictions)
 
-	for i in range(0,len(predictions)):
-		print(predictions[i], test_text['Text'].iloc[i])
+    for i in range(0,len(predictions)):
+        print(predictions[i], test_text['Text'].iloc[i])
 
-	#
+    #
 
-	"""
+    """
 
-	return prediction
-
+    return prediction
 
 def main():
-	train_data = read_csv(trainfile)
-	test_data = read_csv(testfile)
-	calgary_tokens = calgary(train_data)
-	train_map = train_data.copy()
-	train_map['Text'].apply(map_calgary,c_list=calgary_tokens)
-	train_map = train_map.rename(columns={'Text':'calgarymatches'})
+    train_data = read_csv(trainfile) # train_data should not be changed, so it will only contain the original text
+    test_data = read_csv(testfile) # test_data should not be changed, so it will only contain the original text
 
-	train_data = train_data.join(train_map['calgarymatches'])
+    # The following data frames contain the features to be trained on:
+    train_data_transformed = read_csv(trainfile)
+    test_data_transformed = read_csv(testfile)
+
+    # Add calgary tokens to test and train data
+    calgary_tokens = calgary(train_data)
+    train_map = train_data.copy()
+    train_map['Text'].apply(map_calgary,c_list=calgary_tokens)
+    train_map['Text'] = train_map['Text'].apply(map_calgary,c_list=calgary_tokens)
+    train_map = train_map.rename(columns={'Text':'calgarymatches'})
+
+    train_data_transformed = train_data_transformed.join(train_map['calgarymatches'])
+
+    test_map = test_data.copy()
+    test_map['Text'] = test_map['Text'].apply(map_calgary,c_list=calgary_tokens)
+    test_map = test_map.rename(columns={'Text':'calgarymatches'})
+
+    test_data_transformed = test_data_transformed.join(test_map['calgarymatches'])
+
+    # Add average word length to test and train data
+    train_map = train_data.copy()
+    train_map['Text'] = train_map['Text'].apply(average_word_length)
+    train_map = train_map.rename(columns={'Text': 'averagewordlength'})
+
+    train_data_transformed = train_data_transformed.join(train_map['averagewordlength'])
+
+    test_map = test_data.copy()
+    test_map['Text'] = test_map['Text'].apply(average_word_length)
+    test_map = test_map.rename(columns={'Text': 'averagewordlength'})
+
+    test_data_transformed = test_data_transformed.join(test_map['averagewordlength'])
+
+    # print some of the topmost data to show created features and their values
+    print(test_data_transformed.head(4))
+    print("------")
+    print(train_data_transformed.head(4))
+
+    # Classify
+    #train_data.drop('Id',axis=1)
+    print(list(test_data_transformed))
+    print(list(train_data_transformed))
+    predictions = classify(train_data_transformed,test_data_transformed)
+
+    # TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
+
+    #predictions = classify(train_data,test_data)
+    write_scores(resultfile,predictions)
 
 
-	test_map = test_data.copy()
-	test_map['Text'].apply(map_calgary,c_list=calgary_tokens)
-	test_map = test_map.rename(columns={'Text':'calgarymatches'})
 
-	test_data = test_data.join(test_map['calgarymatches'])
-	#train_data.drop('Id',axis=1)
-	print(list(test_data))
-	print(list(train_data))
-	predictions = classify(train_data,test_data)
+    #cross_validate(train_data=train_data, k=3)
 
-
-
-
-
-
-
-		
-	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column 
-
-	#predictions = classify(train_data,test_data)
-	write_scores(resultfile,predictions)
-
-	
-
-	#cross_validate(train_data=train_data, k=3)
-
-	#grid_search(
-	#	par={
-	#		"count_vectorizer__ngram_range": [(1, 4), (1,6), (1,8)]
-	#		# "count_vectorizer__analyzer": ['char', 'char_wb']
-	#		# "count_vectorizer__stop_words": [[], ['uf, in, aber, a']], # ohni isch besser lol
-	#		# "count_vectorizer__token_pattern": ['(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b', '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
-	#		# "count_vectorizer__max_features": [None, 1000, 100] # None
-	#	},
-	#	pipeline= Pipeline([
-	#		('count_vectorizer', CountVectorizer(analyzer="char", token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b')),
-	#		('classifier', MultinomialNB())
-	#	]),
-	#	train_data=train_data
-	#)
+    #grid_search(
+    #	par={
+    #		"count_vectorizer__ngram_range": [(1, 4), (1,6), (1,8)]
+    #		# "count_vectorizer__analyzer": ['char', 'char_wb']
+    #		# "count_vectorizer__stop_words": [[], ['uf, in, aber, a']], # ohni isch besser lol
+    #		# "count_vectorizer__token_pattern": ['(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b', '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
+    #		# "count_vectorizer__max_features": [None, 1000, 100] # None
+    #	},
+    #	pipeline= Pipeline([
+    #		('count_vectorizer', CountVectorizer(analyzer="char", token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b')),
+    #		('classifier', MultinomialNB())
+    #	]),
+    #	train_data=train_data
+    #)
 
 
 if __name__ == '__main__':
-	main()
+    main()
