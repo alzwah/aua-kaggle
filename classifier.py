@@ -186,6 +186,61 @@ def calgary(data_in):
     sorted_output = sorted(output, reverse=True)
     #returns 50 best calgary tokens
     return([tok for val, tok in sorted_output[:49]])
+    
+    
+# takes panda dataframe
+# gets training data, returns n-best calgary tokens
+def calgary_ngram(data_in, ngram):
+    #contains tuples of the form (category, sentence)
+    category_text = [(c,s) for c,s in zip(data_in['Label'].values, data_in['Text'].values)]
+    # split up sentences in n-grams (including whitespace)
+    category_tokens = []
+    for elem in category_text:
+        tokens = []
+        # creates bi-/tri-/four-/etc-grams
+        #http://locallyoptimal.com/blog/2013/01/20/elegant-n-gram-generation-in-python/
+        tup = zip(*[list(elem[1])[i:] for i in range(ngram)])
+        for e in tup:
+            tokens.append(''.join(e))
+        category_tokens.append((elem[0], tokens))
+    
+    # structure: {category: freq}
+    term_freq = {}
+    # structure: {(category, token):freq}
+    term_freq_per_category = {}
+    term_count = 0
+    term_count_per_category = {'BE':0, 'BS':0, 'LU': 0, 'ZH':0}
+    
+    for cat, text in category_tokens:
+        for token in text:            
+            if token in term_freq.keys():
+                term_freq[token] += 1
+            else:
+                term_freq[token] = 1
+            if (cat, token) in term_freq_per_category.keys():
+                term_freq_per_category[(cat, token)] += 1
+            else:
+                term_freq_per_category[(cat,token)] = 1
+                
+            term_count += 1
+            term_count_per_category[cat] += 1
+            
+    #structure: [(calgary value, tok)]
+    output = []
+    
+    print(term_count_per_category)
+    for tok, freq in term_freq.items():
+        if freq > 2:
+            # lol sorry für ds statement
+             # max(probability t given category: termfrequency in category/total amount of terms in category)
+            oberer_bruch = max((get_term_freq_per_cat(term_freq_per_category, 'BE', tok)/term_count_per_category['BE']), (get_term_freq_per_cat(term_freq_per_category, 'BS', tok)/term_count_per_category['BS']), (get_term_freq_per_cat(term_freq_per_category, 'LU', tok)/term_count_per_category['LU']), (get_term_freq_per_cat(term_freq_per_category, 'ZH', tok)/term_count_per_category['ZH']))
+            # probability term: termfrequency/total amount of terms
+            unterer_bruch = freq/term_count
+            output.append((oberer_bruch/unterer_bruch, tok))
+    
+    sorted_output = sorted(output, reverse=True)
+    #returns 25 most significant n-grams
+    return([tok for val, tok in sorted_output[:24]])
 
 
 def average_word_length(sentence_in):
@@ -317,6 +372,7 @@ def main():
     train_data_transformed = read_csv(trainfile)
     test_data_transformed = read_csv(testfile)
 
+    
     # Add calgary tokens to test and train data
     calgary_tokens = calgary(train_data)
     train_map = train_data.copy()
@@ -331,6 +387,68 @@ def main():
     test_map = test_map.rename(columns={'Text':'calgarymatches'})
 
     test_data_transformed = test_data_transformed.join(test_map['calgarymatches'])
+    
+    #Add calgary bigrams to test and train data
+    calgary_bigrams = calgary_ngram(train_data,2)
+    train_map = train_data.copy()
+    train_map['Text'].apply(map_calgary,c_list=calgary_bigrams)
+    train_map['Text'] = train_map['Text'].apply(map_calgary,c_list=calgary_bigrams)
+    train_map = train_map.rename(columns={'Text':'calgarybimatches'})
+
+    train_data_transformed = train_data_transformed.join(train_map['calgarybimatches'])
+
+    test_map = test_data.copy()
+    test_map['Text'] = test_map['Text'].apply(map_calgary,c_list=calgary_bigrams)
+    test_map = test_map.rename(columns={'Text':'calgarybimatches'})
+
+    test_data_transformed = test_data_transformed.join(test_map['calgarybimatches'])
+    
+    #Add calgary trigrams to test and train data
+    calgary_trigrams = calgary_ngram(train_data,3)
+    train_map = train_data.copy()
+    train_map['Text'].apply(map_calgary,c_list=calgary_trigrams)
+    train_map['Text'] = train_map['Text'].apply(map_calgary,c_list=calgary_trigrams)
+    train_map = train_map.rename(columns={'Text':'calgarytrimatches'})
+
+    train_data_transformed = train_data_transformed.join(train_map['calgarytrimatches'])
+
+    test_map = test_data.copy()
+    test_map['Text'] = test_map['Text'].apply(map_calgary,c_list=calgary_trigrams)
+    test_map = test_map.rename(columns={'Text':'calgarytrimatches'})
+
+    test_data_transformed = test_data_transformed.join(test_map['calgarytrimatches'])
+    
+    #Add calgary fourgrams to test and train data
+    calgary_fourgrams = calgary_ngram(train_data,4)
+    train_map = train_data.copy()
+    train_map['Text'].apply(map_calgary,c_list=calgary_fourgrams)
+    train_map['Text'] = train_map['Text'].apply(map_calgary,c_list=calgary_fourgrams)
+    train_map = train_map.rename(columns={'Text':'calgaryfourmatches'})
+
+    train_data_transformed = train_data_transformed.join(train_map['calgaryfourmatches'])
+
+    test_map = test_data.copy()
+    test_map['Text'] = test_map['Text'].apply(map_calgary,c_list=calgary_fourgrams)
+    test_map = test_map.rename(columns={'Text':'calgaryfourmatches'})
+
+    test_data_transformed = test_data_transformed.join(test_map['calgaryfourmatches'])
+    
+    #Add calgary fivegrams to test and train data
+    calgary_fivegrams = calgary_ngram(train_data,5)
+    train_map = train_data.copy()
+    train_map['Text'].apply(map_calgary,c_list=calgary_fivegrams)
+    train_map['Text'] = train_map['Text'].apply(map_calgary,c_list=calgary_fivegrams)
+    train_map = train_map.rename(columns={'Text':'calgaryfivematches'})
+
+    train_data_transformed = train_data_transformed.join(train_map['calgaryfivematches'])
+
+    test_map = test_data.copy()
+    test_map['Text'] = test_map['Text'].apply(map_calgary,c_list=calgary_fivegrams)
+    test_map = test_map.rename(columns={'Text':'calgaryfivematches'})
+
+    test_data_transformed = test_data_transformed.join(test_map['calgaryfivematches'])
+    
+    
 
     # Add average word length to test and train data
     train_map = train_data.copy()
