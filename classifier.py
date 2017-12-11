@@ -51,7 +51,7 @@ class DataFrameColumnExtracter(TransformerMixin):
 		return X[self.column]
 
 def read_csv(filename):
-	data = pd.read_csv(filename,encoding='latin-1')
+	data = pd.read_csv(filename,encoding='utf-8')
 	return data
 
 def write_scores(filename,predictions):
@@ -88,56 +88,7 @@ def grid_search(pipeline, par, train_data):
 		print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 	return gs.best_estimator_
-"""
-def cross_validate(train_data, k):
-	pipelines = [
-		(Pipeline([
-			('count_vectorizer', TfidfVectorizer()),
-			('classifier', MultinomialNB())
-		]), "MultinomialNB, Tfidf vectorizer"),
-		(Pipeline([
-			('count_vectorizer', CountVectorizer(
-				analyzer="char_wb",
-				token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',
-				ngram_range=(1,4),
-			)),
-			('classifier', MultinomialNB())
-		]), "MultinomialNB, count vectorizer")
-	]
 
-	scores = {}
-	for pipeline, name in pipelines:
-		scores[name] = 0
-
-	# train models with 10-fold cross-validation for performance comparison
-	kf = KFold(n_splits=k, shuffle=False)
-	folds = 0
-	# Split data into train and test set
-	for train, test in kf.split(train_data['Text'].values,train_data['Label'] ):
-		folds += 1
-		print("Fold:", folds)
-
-		x_train = train_data['Text'].values[train]
-		x_test = train_data['Text'].values[test]
-		y_train = train_data['Label'].values[train]
-		y_test = train_data['Label'].values[test]
-
-		for pipeline, name in pipelines:
-
-			pipeline.fit(x_train, y_train)
-			predictions = pipeline.predict(x_test)
-
-			new_score = accuracy_score(y_true=y_test, y_pred=predictions)
-
-			scores[name] = scores[name] + new_score
-			print(name + ": ", new_score, scores[name]/folds)
-		print()
-
-	# create pretty output
-	for pipeline, name in pipelines:
-		print(name+":", "\taverage accuracy:", scores[name]/folds)
-
-"""
 # takes panda dataframe
 # gets training data, returns n-best calgary tokens
 def calgary(data_in):
@@ -267,6 +218,7 @@ def map_calgary(sentence, c_list):
 			output.append(tok)
 
 	return (" ").join(output)
+"""
 
 #do we need separate function ??? 
 def count_vocals(sentence_in):
@@ -275,9 +227,8 @@ def count_vocals(sentence_in):
 	#(a,e,i,o,u,ä,ö,ü,è,é,à)
 	vec = (0,0,0,0,0,0,0,0,0,0,0)
 	for char in sentence:
-
 	return 
-
+"""
 #function that creates subpipelines for transformer 
 def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 	return (subpipeline_name,Pipeline([
@@ -340,6 +291,7 @@ def classify(train_data,test_data):
 	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
 	#test_text = test_data['Text'].values
+	"""
 	k_fold = KFold(n_splits=3)
 	for train_indices, test_indices in k_fold.split(train_data):
 
@@ -359,7 +311,7 @@ def classify(train_data,test_data):
 
 
 
-	""" UM MIT TESTDATA ZU ARBEITEN:
+	""" #UM MIT TESTDATA ZU ARBEITEN:
 	
 	train_y = train_data['Label'].values.astype(str)
 	train_text = train_data
@@ -368,18 +320,16 @@ def classify(train_data,test_data):
 
 	print(train_data)
 	print(test_data)
-	pipeline.fit(train_data,train_y)
-	predictions = pipeline.predict(test_text)
+	pipeline_Multinomial.fit(train_data,train_y)
+	predictions = pipeline_Multinomial.predict(test_text)
 	print(predictions)
 
 	for i in range(0,len(predictions)):
 		print(predictions[i], test_text['Text'].iloc[i])
 
-	#
 
-	"""
 	
-	return prediction
+	return predictions
 
 def main():
 	train_data = read_csv(trainfile) # train_data should not be changed, so it will only contain the original text
@@ -396,7 +346,7 @@ def main():
 	(calgary_ngram(train_data,2),'calgarybimatches'),
 	(calgary_ngram(train_data,3),'calgarytrimatches'),
 	(calgary_ngram(train_data,4),'calgaryfourmatches'),
-	(calgary_ngram(train_data,5),'calgaryfivematches'),
+	(calgary_ngram(train_data,5),'calgaryfivematches')
 	]
 
 	print('...adding features')
