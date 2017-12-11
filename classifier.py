@@ -10,21 +10,33 @@ import numpy as np
 import argparse
 import codecs
 
+# Visualization
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Basic scikit features
 from sklearn.base import TransformerMixin, BaseEstimator
-from sklearn.metrics import accuracy_score
-from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.model_selection import GridSearchCV, KFold
+
+# Measuring things and feature selection:
+from sklearn.metrics import accuracy_score
+from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
+
+# Classifiers without meta estimators:
+from sklearn.cluster import KMeans
+from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
+from sklearn.neighbors import NearestCentroid # Mostly because it sounds really cool and seems useful in general
+from sklearn.naive_bayes import BernoulliNB
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import *
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.cluster import KMeans
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.model_selection import GridSearchCV
 from sklearn.neural_network import MLPClassifier  # multi-layer perceptron
-from sklearn.model_selection import KFold  # for cross-validation
-from sklearn.feature_selection import mutual_info_classif
+
+# Meta estimators:
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.multiclass import OneVsOneClassifier, OneVsRestClassifier
 
 parser = argparse.ArgumentParser(description='Classify Swiss Dialects')
 parser.add_argument('trainfile', help='the csv file with the train data')
@@ -37,21 +49,6 @@ testfile = arguments.testfile
 resultfile = arguments.resultfile
 
 word_regex = '(?u)(?:\b)?\w*(?:\b)?'
-
-# Stackoverflow says this will print the vectors of a pipeline:
-# https://stackoverflow.com/questions/34802465/sklearn-is-there-any-way-to-debug-pipelines
-class Debug(BaseEstimator, TransformerMixin):
-
-	def transform(self, X):
-		# print(pd.DataFrame(X).head())
-		# print(""+type(X))
-		print(X[:,0])
-		print(X.shape)
-		return X
-
-	def fit(self, X, y=None, **fit_params):
-		return self
-
 
 # s
 class DataFrameColumnExtracter(TransformerMixin):
@@ -245,17 +242,7 @@ def map_calgary(sentence, c_list):
 			output.append(tok)
 
 	return (" ").join(output)
-"""
 
-#do we need separate function ??? 
-def count_vocals(sentence_in):
-	#best way to do this? dict?
-
-	#(a,e,i,o,u,ä,ö,ü,è,é,à)
-	vec = (0,0,0,0,0,0,0,0,0,0,0)
-	for char in sentence:
-	return 
-"""
 #function that creates subpipelines for transformer 
 def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 	return (subpipeline_name,Pipeline([
@@ -291,10 +278,9 @@ def classify(train_data, test_data):
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
-		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2)), 'subpipeline_countvocals', 'Text'),
-		# create_subpipeline('count_vec',CountVectorizer(analyzer="char_wb",token_pattern=word_regex,ngram_range=(1,4)),'subpipeline_doublevocals','Text'),
+		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
@@ -302,13 +288,46 @@ def classify(train_data, test_data):
 
 	]
 
+	transformer2 = [ # To test changes to transformer
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+		create_subpipeline('count_vec',
+						   TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'),
+						   'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+	]
+
+	transformer3 = [ # only count of words and chars
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(ngram_range=(2,6), analyzer='char'), 'subpipeline_text_char', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text_words', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+	]
+
 	transformer_n_grams = [
 		create_subpipeline('count_vec', CountVectorizer(ngram_range=(2,2), analyzer='word', token_pattern=word_regex), 'subpipeline_word_n_grams', 'Text'),
 		create_subpipeline('count_vec', CountVectorizer(ngram_range=(2,5), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
 		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text')
+	]
 
+	transformer_mlp = [
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
 	]
 
 	# Preparing potential pipelines
@@ -317,19 +336,64 @@ def classify(train_data, test_data):
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
 
+	pipeline_Multinomial2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer2)),
+		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
+	])
+
 	pipeline_KNeighbors = Pipeline([
 			('union', FeatureUnion(transformer_list = transformer)),
 			('clf', KNeighborsClassifier(n_neighbors = 15))
 			])
 
-	pipeline_MultinomialNB2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_n_grams)),
-		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
+	pipeline_MLP = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer_mlp)),
+		('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
+	])
+
+	pipeline_ridge = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', RidgeClassifier())
+	])
+
+	pipeline_ridge_cv = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', RidgeClassifierCV())
+	])
+	pipeline_nearest_centroid = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', NearestCentroid())
+	])
+	pipeline_nearest_centroid_2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', NearestCentroid(metric='l2', ))
+	])
+	pipeline_bernoulliNB = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', BernoulliNB())
+	])
+	pipeline_one_v_one = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
+	])
+	pipeline_one_v_rest = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
 	])
 
 	# Evaluate pipelines
-	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	evaluate(train_data, pipeline_MultinomialNB2, 'MultinomialNB2')
+	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
+	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
+	# evaluate(train_data, pipeline_MLP, 'MLP')
+	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
+	#
+	# evaluate(train_data, pipeline_ridge, 'Ridge')
+	# evaluate(train_data, pipeline_ridge_cv, 'RidgeCV')
+	# evaluate(train_data, pipeline_nearest_centroid, 'NearestCentroid')
+	# evaluate(train_data, pipeline_nearest_centroid_2, 'NearestCentroid')
+	# evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
+	# evaluate(train_data, pipeline_one_v_one, 'One v. one, chosen estimator MultinomialNB')
+	# evaluate(train_data, pipeline_one_v_rest, 'One v. rest, chosen estimator MultinomialNB')
 
 	#train_text = train_data['Text'].values
 	#train_y = train_data['Label'].values
@@ -376,6 +440,19 @@ def evaluate(train_data, pipeline, name: str):
 		prediction = pipeline.predict(test_text)
 		print('\t'+str(accuracy_score(test_y, prediction)))
 
+
+def visualize(train_data):
+	# gather data for calgarybigrams
+	visualize_calgarybigrams = pd.DataFrame()
+	for index, row in train_data.iterrows():
+		for n_gram in row['calgarybimatches'].strip().split(' '):
+			visualize_calgarybigrams = visualize_calgarybigrams.append({'calgarybimatches': n_gram, 'Label': row['Label']}, ignore_index=True)
+	print(visualize_calgarybigrams.head())
+
+	# create plot
+	plot = sns.countplot(x='calgarybimatches', hue='Label', data=visualize_calgarybigrams)
+	plot.show()
+
 def main():
 	train_data = read_csv(trainfile)  # train_data should not be changed, so it will only contain the original text
 	test_data = read_csv(testfile)  # test_data should not be changed, so it will only contain the original text
@@ -405,19 +482,26 @@ def main():
 																		   test_data_transformed, average_word_length,
 																		   'averagewordlength', calgary_tokens=None)
 
-	print(test_data_transformed)
-	print(train_data_transformed)
+
+	# print(test_data_transformed)
+	# print(train_data_transformed)
 
 	# print some of the topmost data to show created features and their values
-	print(test_data_transformed.head(30))
-	print("------")
-	print(train_data_transformed.head(30))
+	# print(test_data_transformed.head(30))
+	# print("------")
+	# print(train_data_transformed.head(30))
+
+	# Visualization of features
+	visualize(train_data_transformed)
+
+
+	# print(train_data_transformed['calgarytrimatches'].head(10))
 
 	# Classify
 	# train_data.drop('Id',axis=1)
-	print(list(test_data_transformed))
-	print(list(train_data_transformed))
-	predictions = classify(train_data_transformed, test_data_transformed)
+	# print(list(test_data_transformed))
+	# print(list(train_data_transformed))
+	# predictions = classify(train_data_transformed, test_data_transformed)
 
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
 
