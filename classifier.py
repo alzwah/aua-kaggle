@@ -10,7 +10,7 @@ import numpy as np
 import argparse
 import codecs
 
-from sklearn.base import TransformerMixin
+from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.metrics import accuracy_score
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -35,6 +35,23 @@ arguments = parser.parse_args()
 trainfile = arguments.trainfile
 testfile = arguments.testfile
 resultfile = arguments.resultfile
+
+word_regex = '(?u)(?:\b)?\w*(?:\b)?'
+
+# Stackoverflow says this will print the vectors of a pipeline:
+# https://stackoverflow.com/questions/34802465/sklearn-is-there-any-way-to-debug-pipelines
+class Debug(BaseEstimator, TransformerMixin):
+
+	def transform(self, X):
+		# print(pd.DataFrame(X).head())
+		# print(""+type(X))
+		print(X[:,0])
+		print(X.shape)
+		return X
+
+	def fit(self, X, y=None, **fit_params):
+		return self
+
 
 # s
 class DataFrameColumnExtracter(TransformerMixin):
@@ -206,6 +223,13 @@ def average_word_length(sentence_in):
 		count += 1
 	return str(sum / count)
 
+def get_list_of_double_vocals():
+	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
+	double_vocals = []
+	for char1 in single_vocals:
+		for char2 in single_vocals:
+			double_vocals.append(''+char1+char2)
+
 def get_term_freq_per_cat(dict, cat, token):
 	if (cat, token) in dict.keys():
 		return dict[(cat, token)]
@@ -268,8 +292,8 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
-		# create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_vocals()), 'subpipeline_countvocals', 'Text'),
-		# create_subpipeline('count_vec',CountVectorizer(analyzer="char_wb",token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b',ngram_range=(1,4)),'subpipeline_doublevocals','Text'),
+		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2)), 'subpipeline_countvocals', 'Text'),
+		# create_subpipeline('count_vec',CountVectorizer(analyzer="char_wb",token_pattern=word_regex,ngram_range=(1,4)),'subpipeline_doublevocals','Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
@@ -277,23 +301,81 @@ def classify(train_data, test_data):
 
 	]
 
+	transformer_n_grams = [
+		create_subpipeline('count_vec', CountVectorizer(ngram_range=(2,2), analyzer='word', token_pattern=word_regex), 'subpipeline_word_n_grams', 'Text'),
+		create_subpipeline('count_vec', CountVectorizer(ngram_range=(2,5), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
+		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+
+	]
+
+	# Preparing potential pipelines
 	pipeline_Multinomial = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
 
-	pipeline = Pipeline([
+	pipeline_KNeighbors = Pipeline([
 			('union', FeatureUnion(transformer_list = transformer)),
 			('clf', KNeighborsClassifier(n_neighbors = 15))
 			])
+
+	pipeline_MultinomialNB2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer_n_grams)),
+		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
+	])
+
+	# Evaluate pipelines
+	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
+	evaluate(train_data, pipeline_MultinomialNB2, 'MultinomialNB2')
 
 	#train_text = train_data['Text'].values
 	#train_y = train_data['Label'].values
 	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
 	#test_text = test_data['Text'].values
-	
-	""" UNCOMMENT UM nur mit train data zu arbeiten
+
+	# # UNCOMMENT UM nur mit train data zu arbeiten
+	# k_fold = KFold(n_splits=3)
+	# for train_indices, test_indices in k_fold.split(train_data):
+	# 	train_text = train_data.iloc[train_indices]
+	# 	train_y = train_data.iloc[train_indices]['Label'].values.astype(str)
+	# 	train_text.drop('Label', axis=1)
+	#
+	# 	test_text = train_data.iloc[test_indices]
+	# 	test_y = train_data.iloc[test_indices]['Label'].values.astype(str)
+	# 	test_text.drop('Label', axis=1)
+	#
+	# 	pipeline.fit(train_text, train_y)
+	#
+	# 	prediction = pipeline.predict(test_text)
+	# 	print(accuracy_score(test_y, prediction))
+
+	#UM MIT TESTDATA ZU ARBEITEN:
+	#
+	# train_y = train_data['Label'].values.astype(str)
+	# train_text = train_data
+	#
+	# test_text = test_data
+	#
+	# print(train_data)
+	# print(test_data)
+	# pipeline.fit(train_data,train_y)
+	# predictions = pipeline.predict(test_text)
+	# print(predictions)
+	#
+	# for i in range(0,len(predictions)):
+	# 	print(predictions[i], test_text['Text'].iloc[i])
+	#
+	#
+	# return predictions
+
+def evaluate(train_data, pipeline, name: str):
+
+	print(name+ ':')
+
+	# UNCOMMENT UM nur mit train data zu arbeiten
 	k_fold = KFold(n_splits=3)
 	for train_indices, test_indices in k_fold.split(train_data):
 		train_text = train_data.iloc[train_indices]
@@ -304,29 +386,10 @@ def classify(train_data, test_data):
 		test_y = train_data.iloc[test_indices]['Label'].values.astype(str)
 		test_text.drop('Label', axis=1)
 
-		pipeline_Multinomial.fit(train_text, train_y)
+		pipeline.fit(train_text, train_y)
 
-		prediction = pipeline_Multinomial.predict(test_text)
-		print(accuracy_score(test_y, prediction))
-
-	""" #UM MIT TESTDATA ZU ARBEITEN:
-	
-	train_y = train_data['Label'].values.astype(str)
-	train_text = train_data
-
-	test_text = test_data
-
-	print(train_data)
-	print(test_data)
-	pipeline_Multinomial.fit(train_data,train_y)
-	predictions = pipeline_Multinomial.predict(test_text)
-	print(predictions)
-
-	for i in range(0,len(predictions)):
-		print(predictions[i], test_text['Text'].iloc[i])
-
-	
-	return predictions
+		prediction = pipeline.predict(test_text)
+		print('\t'+str(accuracy_score(test_y, prediction)))
 
 def main():
 	train_data = read_csv(trainfile)  # train_data should not be changed, so it will only contain the original text
@@ -374,7 +437,7 @@ def main():
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
 
 	# predictions = classify(train_data,test_data)
-	write_scores(resultfile, predictions)
+	# write_scores(resultfile, predictions)
 
 # cross_validate(train_data=train_data, k=3)
 
@@ -383,7 +446,7 @@ def main():
 #		"count_vectorizer__ngram_range": [(1, 4), (1,6), (1,8)]
 #		# "count_vectorizer__analyzer": ['char', 'char_wb']
 #		# "count_vectorizer__stop_words": [[], ['uf, in, aber, a']], # ohni isch besser lol
-#		# "count_vectorizer__token_pattern": ['(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b', '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
+		# "count_vectorizer__token_pattern": [word_regex, '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
 #		# "count_vectorizer__max_features": [None, 1000, 100] # None
 #	},
 #	pipeline= Pipeline([
