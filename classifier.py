@@ -291,7 +291,8 @@ def classify(train_data,test_data):
 	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
 	#test_text = test_data['Text'].values
-	"""
+	
+	""" UNCOMMENT UM nur mit train data zu arbeiten
 	k_fold = KFold(n_splits=3)
 	for train_indices, test_indices in k_fold.split(train_data):
 
