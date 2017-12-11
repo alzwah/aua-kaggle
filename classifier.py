@@ -336,22 +336,6 @@ def classify(train_data, test_data):
 	#im test file von der web site hat es einen whitespace vor 'Text'
 	#test_text = test_data['Text'].values
 
-	# # UNCOMMENT UM nur mit train data zu arbeiten
-	# k_fold = KFold(n_splits=3)
-	# for train_indices, test_indices in k_fold.split(train_data):
-	# 	train_text = train_data.iloc[train_indices]
-	# 	train_y = train_data.iloc[train_indices]['Label'].values.astype(str)
-	# 	train_text.drop('Label', axis=1)
-	#
-	# 	test_text = train_data.iloc[test_indices]
-	# 	test_y = train_data.iloc[test_indices]['Label'].values.astype(str)
-	# 	test_text.drop('Label', axis=1)
-	#
-	# 	pipeline.fit(train_text, train_y)
-	#
-	# 	prediction = pipeline.predict(test_text)
-	# 	print(accuracy_score(test_y, prediction))
-
 	#UM MIT TESTDATA ZU ARBEITEN:
 	#
 	# train_y = train_data['Label'].values.astype(str)
