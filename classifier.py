@@ -68,10 +68,10 @@ def read_csv(filename):
 def write_scores(filename, predictions):
 	predictions = [(i + 1, j) for i, j in enumerate(predictions)]
 	with open(filename, 'w') as resultof:
-		csv_writer = csv.writer(resultof, delimiter=",")
+		csv_writer = csv.writer(resultof, delimiter=",", lineterminator='\n')
 		csv_writer.writerow(['Id', 'Prediction'])
 		for id_, pred in predictions:
-			csv_writer.writerow([id_, pred])
+			csv_writer.writerow([id_, pred.strip()])
 
 def grid_search(pipeline, par, train_data):
 	"""
