@@ -277,7 +277,7 @@ def append_feature_columns(train_data_transformed,test_data_transformed,function
 def classify(train_data, test_data):
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer = [
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
+		# create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
@@ -364,10 +364,6 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', NearestCentroid())
 	])
-	pipeline_nearest_centroid_2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
-		('clf', NearestCentroid(metric='l2', ))
-	])
 	pipeline_bernoulliNB = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', BernoulliNB())
@@ -382,7 +378,7 @@ def classify(train_data, test_data):
 	])
 
 	# Evaluate pipelines
-	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
+	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
 	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
 	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
@@ -402,23 +398,23 @@ def classify(train_data, test_data):
 	#test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
-	#
-	# train_y = train_data['Label'].values.astype(str)
-	# train_text = train_data
-	#
-	# test_text = test_data
-	#
-	# print(train_data)
-	# print(test_data)
-	# pipeline.fit(train_data,train_y)
-	# predictions = pipeline.predict(test_text)
-	# print(predictions)
-	#
-	# for i in range(0,len(predictions)):
-	# 	print(predictions[i], test_text['Text'].iloc[i])
-	#
-	#
-	# return predictions
+	pipeline = pipeline_Multinomial
+	train_y = train_data['Label'].values.astype(str)
+	train_text = train_data
+
+	test_text = test_data
+
+	print(train_data)
+	print(test_data)
+	pipeline.fit(train_data,train_y)
+	predictions = pipeline.predict(test_text)
+	print(predictions)
+
+	for i in range(0,len(predictions)):
+		print(predictions[i], test_text['Text'].iloc[i])
+
+
+	return predictions
 
 def evaluate(train_data, pipeline, name: str):
 
@@ -465,7 +461,8 @@ def main():
 
 	# create a list of lists with tokens to be evaluated 
 
-	token_lists = [(calgary(train_data),'calgarymatches'),
+	token_lists = [
+		# (calgary(train_data),'calgarymatches'),
 	(calgary_ngram(train_data,2),'calgarybimatches'),
 	(calgary_ngram(train_data,3),'calgarytrimatches'),
 	(calgary_ngram(train_data,4),'calgaryfourmatches'),
@@ -478,9 +475,9 @@ def main():
 																			   test_data_transformed, map_calgary,
 																			   columname, token_list)
 
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
-																		   test_data_transformed, average_word_length,
-																		   'averagewordlength', calgary_tokens=None)
+	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+	# 																	   test_data_transformed, average_word_length,
+	# 																	   'averagewordlength', calgary_tokens=None)
 
 
 	# print(test_data_transformed)
@@ -492,7 +489,7 @@ def main():
 	# print(train_data_transformed.head(30))
 
 	# Visualization of features
-	visualize(train_data_transformed)
+	# visualize(train_data_transformed)
 
 
 	# print(train_data_transformed['calgarytrimatches'].head(10))
@@ -501,12 +498,11 @@ def main():
 	# train_data.drop('Id',axis=1)
 	# print(list(test_data_transformed))
 	# print(list(train_data_transformed))
-	# predictions = classify(train_data_transformed, test_data_transformed)
+	predictions = classify(train_data_transformed, test_data_transformed)
 
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
 
-	# predictions = classify(train_data,test_data)
-	# write_scores(resultfile, predictions)
+	write_scores(resultfile, predictions)
 
 # cross_validate(train_data=train_data, k=3)
 
