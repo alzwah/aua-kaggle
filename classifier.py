@@ -229,6 +229,7 @@ def get_list_of_double_vocals():
 	for char1 in single_vocals:
 		for char2 in single_vocals:
 			double_vocals.append(''+char1+char2)
+	return double_vocals
 
 def get_term_freq_per_cat(dict, cat, token):
 	if (cat, token) in dict.keys():
