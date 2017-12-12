@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import codecs
+from importlib import reload
 
 # Visualization
 import seaborn as sns
@@ -218,7 +219,7 @@ def average_word_length(sentence_in):
 	for word in sentence_in.split(sep=" "):
 		sum += len(word)
 		count += 1
-	return str(sum / count)
+	return (sum / count)
 
 def get_list_of_double_vocals():
 	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
@@ -438,16 +439,29 @@ def evaluate(train_data, pipeline, name: str):
 
 
 def visualize(train_data):
-	# gather data for calgarybigrams
-	visualize_calgarybigrams = pd.DataFrame()
-	for index, row in train_data.iterrows():
-		for n_gram in row['calgarybimatches'].strip().split(' '):
-			visualize_calgarybigrams = visualize_calgarybigrams.append({'calgarybimatches': n_gram, 'Label': row['Label']}, ignore_index=True)
-	print(visualize_calgarybigrams.head())
+	print('... Adding plots.')
 
-	# create plot
-	plot = sns.countplot(x='calgarybimatches', hue='Label', data=visualize_calgarybigrams)
-	plot.show()
+	# Plot for average word length
+	# Note: For some reason this has to happen before the calgari plots or the plot will be wrong.
+	sns.boxplot(x='Label', y='averagewordlength', hue=None, data=train_data)
+	plt.savefig('plots/averagewordlength_plot.pdf')
+	print('\tAdded averagewordlength_plot.pdf')
+
+	# Plots for calgari
+	calgari_labels = ['calgarybimatches', 'calgarytrimatches', 'calgaryfourmatches', 'calgaryfivematches']
+	plt.figure(figsize=(100,10))
+	for label in calgari_labels:
+		# gather data for calgary n grams
+		visualize_calgary_n_grams = pd.DataFrame()
+		for index, row in train_data.iterrows():
+			for n_gram in row[label].strip().split(' '):
+				visualize_calgary_n_grams = visualize_calgary_n_grams.append(
+					{label: n_gram, 'Label': row['Label']}, ignore_index=True)
+		# create and save plot
+		sns.countplot(x=label, hue='Label', data=visualize_calgary_n_grams)
+		plt.savefig('plots/'+label+'_plot.pdf')
+		print('\tAdded '+label+'_plot.pdf')
+	print('Done adding plots.')
 
 def main():
 	train_data = read_csv(trainfile)  # train_data should not be changed, so it will only contain the original text
@@ -475,10 +489,11 @@ def main():
 																			   test_data_transformed, map_calgary,
 																			   columname, token_list)
 
-	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
-	# 																	   test_data_transformed, average_word_length,
-	# 																	   'averagewordlength', calgary_tokens=None)
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, average_word_length,
+																		   'averagewordlength', calgary_tokens=None)
 
+	print('Done adding features.')
 
 	# print(test_data_transformed)
 	# print(train_data_transformed)
@@ -489,7 +504,7 @@ def main():
 	# print(train_data_transformed.head(30))
 
 	# Visualization of features
-	# visualize(train_data_transformed)
+	visualize(train_data_transformed)
 
 
 	# print(train_data_transformed['calgarytrimatches'].head(10))
@@ -498,11 +513,11 @@ def main():
 	# train_data.drop('Id',axis=1)
 	# print(list(test_data_transformed))
 	# print(list(train_data_transformed))
-	predictions = classify(train_data_transformed, test_data_transformed)
+	# predictions = classify(train_data_transformed, test_data_transformed)
 
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
 
-	write_scores(resultfile, predictions)
+	# write_scores(resultfile, predictions)
 
 # cross_validate(train_data=train_data, k=3)
 
