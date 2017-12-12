@@ -20,6 +20,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.preprocessing import FunctionTransformer
 
 # Measuring things and feature selection:
 from sklearn.metrics import accuracy_score
@@ -30,13 +31,22 @@ from sklearn.cluster import KMeans
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
 from sklearn.neighbors import NearestCentroid # Mostly because it sounds really cool and seems useful in general
 from sklearn.naive_bayes import BernoulliNB
-from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier  # multi-layer perceptron
 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import PassiveAggressiveClassifier
+
+
+
 # Meta estimators:
-from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import AdaBoostClassifier
 from sklearn.multiclass import OneVsOneClassifier, OneVsRestClassifier
 
 parser = argparse.ArgumentParser(description='Classify Swiss Dialects')
@@ -154,6 +164,7 @@ def calgary(data_in):
 	sorted_output = sorted(output, reverse=True)
 	# returns 50 best calgary tokens
 	return ([tok for val, tok in sorted_output[:199]])
+
 	# # contains tuples of the form (category, sentence)
 	# category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
 	# # tokenize sentences
@@ -391,12 +402,11 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
-
 	]
 
 	transformer2 = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
 		create_subpipeline('count_vec',
 						   TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'),
@@ -482,6 +492,55 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
 	])
+	pipeline_decision_tree = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', DecisionTreeClassifier())
+	])
+	pipeline_svc = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', SVC())
+	])
+	pipeline_linear_svc = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', LinearSVC())
+	])
+	pipeline_logistic_regression = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', LogisticRegression())
+	])
+	pipeline_sgd_classifier = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
+	])
+	pipeline_passive_agressive = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
+	])
+	pipeline_voting_classifier = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', VotingClassifier(estimators=[
+			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+			], voting='soft', weights=[1.5, 1], n_jobs=-1)
+		)
+	])
+	pipeline_voting_classifier2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', VotingClassifier(estimators=[
+			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+			], voting='soft', weights=[2, 1], n_jobs=-1)
+		)
+	])
+
+	pipeline_ada_boost_classifier = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', AdaBoostClassifier(
+			base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
+		))
+	])
+
+
 
 	# Evaluate pipelines
 	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
@@ -496,6 +555,15 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
 	# evaluate(train_data, pipeline_one_v_one, 'One v. one, chosen estimator MultinomialNB')
 	# evaluate(train_data, pipeline_one_v_rest, 'One v. rest, chosen estimator MultinomialNB')
+	# evaluate(train_data, pipeline_decision_tree, 'Decision tree')
+	# evaluate(train_data, pipeline_svc, 'SVC') # ca. 26%
+	# evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
+	# evaluate(train_data, pipeline_logistic_regression, 'Logistic regression')
+	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
+	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
+	evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
+	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
+	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 
 	#train_text = train_data['Text'].values
 	#train_y = train_data['Label'].values
@@ -504,20 +572,18 @@ def classify(train_data, test_data):
 	#test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
-	pipeline = pipeline_Multinomial
+	pipeline = pipeline_voting_classifier
 	train_y = train_data['Label'].values.astype(str)
 	train_text = train_data
 
 	test_text = test_data
 
-	print(train_data)
-	print(test_data)
 	pipeline.fit(train_data,train_y)
 	predictions = pipeline.predict(test_text)
-	print(predictions)
-
-	for i in range(0,len(predictions)):
-		print(predictions[i], test_text['Text'].iloc[i])
+	# print(predictions)
+	#
+	# for i in range(0,len(predictions)):
+	# 	print(predictions[i], test_text['Text'].iloc[i])
 
 
 	return predictions
@@ -581,11 +647,11 @@ def main():
 	# create a list of lists with tokens to be evaluated 
 
 	token_lists = [
-		# (calgary(train_data),'calgarymatches'),
-	(calgary_ngram(train_data,2),'calgarybimatches'),
-	(calgary_ngram(train_data,3),'calgarytrimatches'),
-	(calgary_ngram(train_data,4),'calgaryfourmatches'),
-	(calgary_ngram(train_data,5),'calgaryfivematches')
+		(calgary(train_data),'calgarymatches'),
+		(calgary_ngram(train_data,2),'calgarybimatches'),
+		(calgary_ngram(train_data,3),'calgarytrimatches'),
+		(calgary_ngram(train_data,4),'calgaryfourmatches'),
+		(calgary_ngram(train_data,5),'calgaryfivematches')
 	]
 
 	print('...adding features')
@@ -609,7 +675,7 @@ def main():
 	# print(train_data_transformed.head(30))
 
 	# Visualization of features
-	visualize(train_data_transformed)
+	# visualize(train_data_transformed)
 
 
 	# print(train_data_transformed['calgarytrimatches'].head(10))
@@ -618,11 +684,11 @@ def main():
 	# train_data.drop('Id',axis=1)
 	# print(list(test_data_transformed))
 	# print(list(train_data_transformed))
-	# predictions = classify(train_data_transformed, test_data_transformed)
+	predictions = classify(train_data_transformed, test_data_transformed)
 
 	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
 
-	# write_scores(resultfile, predictions)
+	write_scores(resultfile, predictions)
 
 # cross_validate(train_data=train_data, k=3)
 
