@@ -153,7 +153,56 @@ def calgary(data_in):
 
 	sorted_output = sorted(output, reverse=True)
 	# returns 50 best calgary tokens
-	return ([tok for val, tok in sorted_output[:999]])
+	return ([tok for val, tok in sorted_output[:199]])
+	# # contains tuples of the form (category, sentence)
+	# category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
+	# # tokenize sentences
+	# category_tokens = []
+	# for elem in category_text:
+	# 	tokens = elem[1].split(" ")
+	# 	category_tokens.append((elem[0], tokens))
+	#
+	# # structure: {category: freq}
+	# term_freq = {}
+	# # structure: {(category, token):freq}
+	# term_freq_per_category = {}
+	# term_count = 0
+	# term_count_per_category = {'BE': 0, 'BS': 0, 'LU': 0, 'ZH': 0}
+	#
+	# for cat, text in category_tokens:
+	# 	for token in text:
+	# 		if token in term_freq.keys():
+	# 			term_freq[token] += 1
+	# 		else:
+	# 			term_freq[token] = 1
+	# 		if (cat, token) in term_freq_per_category.keys():
+	# 			term_freq_per_category[(cat, token)] += 1
+	# 		else:
+	# 			term_freq_per_category[(cat, token)] = 1
+	#
+	# 		term_count += 1
+	# 		term_count_per_category[cat] += 1
+	#
+	# # structure: [(calgary value, tok)]
+	# output = []
+	#
+	# print(term_count_per_category)
+	# for tok, freq in term_freq.items():
+	# 	if freq > 2:
+	# 		# lol sorry für ds statement
+	# 		# max(probability t given category: termfrequency in category/total amount of terms in category)
+	# 		oberer_bruch = max(
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'BS', tok) / term_count_per_category['BS']),
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'LU', tok) / term_count_per_category['LU']),
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'ZH', tok) / term_count_per_category['ZH']))
+	# 		# probability term: termfrequency/total amount of terms
+	# 		unterer_bruch = freq / term_count
+	# 		output.append((oberer_bruch / unterer_bruch, tok))
+	#
+	# sorted_output = sorted(output, reverse=True)
+	# # returns 50 best calgary tokens
+	# return ([tok for val, tok in sorted_output[:999]])
 
 # takes panda dataframe
 # gets training data, returns n-best calgary tokens
@@ -212,6 +261,62 @@ def calgary_ngram(data_in, ngram):
 	sorted_output = sorted(output, reverse=True)
 	# returns 25 most significant n-grams
 	return ([tok for val, tok in sorted_output[:199]])
+
+	# Alter Code
+	# # contains tuples of the form (category, sentence)
+	# category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
+	# # split up sentences in n-grams (including whitespace)
+	# category_tokens = []
+	# for elem in category_text:
+	# 	tokens = []
+	# 	# creates bi-/tri-/four-/etc-grams
+	# 	# http://locallyoptimal.com/blog/2013/01/20/elegant-n-gram-generation-in-python/
+	# 	tup = zip(*[list(elem[1])[i:] for i in range(ngram)])
+	# 	for e in tup:
+	# 		tokens.append(''.join(e))
+	# 	category_tokens.append((elem[0], tokens))
+	#
+	# # structure: {category: freq}
+	# term_freq = {}
+	# # structure: {(category, token):freq}
+	# term_freq_per_category = {}
+	# term_count = 0
+	# term_count_per_category = {'BE': 0, 'BS': 0, 'LU': 0, 'ZH': 0}
+	#
+	# for cat, text in category_tokens:
+	# 	for token in text:
+	# 		if token in term_freq.keys():
+	# 			term_freq[token] += 1
+	# 		else:
+	# 			term_freq[token] = 1
+	# 		if (cat, token) in term_freq_per_category.keys():
+	# 			term_freq_per_category[(cat, token)] += 1
+	# 		else:
+	# 			term_freq_per_category[(cat, token)] = 1
+	#
+	# 		term_count += 1
+	# 		term_count_per_category[cat] += 1
+	#
+	# # structure: [(calgary value, tok)]
+	# output = []
+	#
+	# print(term_count_per_category)
+	# for tok, freq in term_freq.items():
+	# 	if freq > 2:
+	# 		# lol sorry für ds statement
+	# 		# max(probability t given category: termfrequency in category/total amount of terms in category)
+	# 		oberer_bruch = max(
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'BS', tok) / term_count_per_category['BS']),
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'LU', tok) / term_count_per_category['LU']),
+	# 			(get_term_freq_per_cat(term_freq_per_category, 'ZH', tok) / term_count_per_category['ZH']))
+	# 		# probability term: termfrequency/total amount of terms
+	# 		unterer_bruch = freq / term_count
+	# 		output.append((oberer_bruch / unterer_bruch, tok))
+	#
+	# sorted_output = sorted(output, reverse=True)
+	# # returns 25 most significant n-grams
+	# return ([tok for val, tok in sorted_output[:199]])
 
 def average_word_length(sentence_in):
 	sum = 0.0
