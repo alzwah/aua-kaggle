@@ -22,9 +22,10 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.preprocessing import FunctionTransformer
 
-# Measuring things and feature selection:
+# Measuring things, feature selection, scaling:
 from sklearn.metrics import accuracy_score
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
+from sklearn.preprocessing import StandardScaler, MaxAbsScaler
 
 # Classifiers without meta estimators:
 from sklearn.cluster import KMeans
@@ -41,8 +42,6 @@ from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import SGDClassifier
 from sklearn.linear_model import PassiveAggressiveClassifier
-
-
 
 # Meta estimators:
 from sklearn.ensemble import VotingClassifier
@@ -72,6 +71,10 @@ class DataFrameColumnExtracter(TransformerMixin):
 	def transform(self, X, y=None):
 		return X[self.column]
 
+	# To support grid search:
+	def get_params(self):
+		return None
+
 def read_csv(filename):
 	data = pd.read_csv(filename,encoding='utf-8')
 	return data
@@ -84,32 +87,37 @@ def write_scores(filename, predictions):
 		for id_, pred in predictions:
 			csv_writer.writerow([id_, pred.strip()])
 
-def grid_search(pipeline, par, train_data):
+def grid_search(transformer, param_grid, train_data, estimator):
 	"""
-	Fine tune the parameters par with regards to the model in pipeline.
-	Returns the classifier with the best parameter combination.
-	Displays the possible parameters that can be used in par when executed.
+	Fine tune the parameters param_grid with regards to the model in pipeline.
+	Displays the possible parameters that can be used in param_grid when executed.
 	"""
-	# Example for parameters: par={"count_vectorizer__ngram_range": [(2, 3), (1, 3)]}
+	# Example for parameters: { 'solver': ['adam', 'lbfgs'], 'activation': ['logistic', 'relu'] }
+	train_x = train_data.copy()
+	train_x.drop('Label', axis=1)
+	train_y = train_data.copy()['Label']
 
-	print("###### [Grid search]", pipeline.named_steps)
+	gs = GridSearchCV(
+		estimator=estimator,
+		param_grid=param_grid,
+		n_jobs=-1,
+		verbose=True
+	)
+
 	print("[Grid search]Supported Parameters:")
-	print(pipeline.get_params().keys())
+	print(gs.estimator.get_params().keys())
 
-	train_x = train_data['Text'].values
-	train_y = train_data['Label'].values
-
-	gs = GridSearchCV(pipeline, par, n_jobs=3, cv=10, verbose=True)
-	gs.fit(train_x, train_y)
+	pipeline = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('gs', gs)
+	])
+	pipeline.fit(train_x, train_y)
 
 	print("[Grid search] Cross validation finished.")
-
 	print("[Grid search] Best parameters:")
 	best_parameters = gs.best_estimator_.get_params()
-	for param_name in sorted(par.keys()):
+	for param_name in sorted(param_grid.keys()):
 		print("\t%s: %r" % (param_name, best_parameters[param_name]))
-
-	return gs.best_estimator_
 
 
 # takes panda dataframe
@@ -164,56 +172,6 @@ def calgary(data_in):
 	sorted_output = sorted(output, reverse=True)
 	# returns 50 best calgary tokens
 	return ([tok for val, tok in sorted_output[:199]])
-
-	# # contains tuples of the form (category, sentence)
-	# category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
-	# # tokenize sentences
-	# category_tokens = []
-	# for elem in category_text:
-	# 	tokens = elem[1].split(" ")
-	# 	category_tokens.append((elem[0], tokens))
-	#
-	# # structure: {category: freq}
-	# term_freq = {}
-	# # structure: {(category, token):freq}
-	# term_freq_per_category = {}
-	# term_count = 0
-	# term_count_per_category = {'BE': 0, 'BS': 0, 'LU': 0, 'ZH': 0}
-	#
-	# for cat, text in category_tokens:
-	# 	for token in text:
-	# 		if token in term_freq.keys():
-	# 			term_freq[token] += 1
-	# 		else:
-	# 			term_freq[token] = 1
-	# 		if (cat, token) in term_freq_per_category.keys():
-	# 			term_freq_per_category[(cat, token)] += 1
-	# 		else:
-	# 			term_freq_per_category[(cat, token)] = 1
-	#
-	# 		term_count += 1
-	# 		term_count_per_category[cat] += 1
-	#
-	# # structure: [(calgary value, tok)]
-	# output = []
-	#
-	# print(term_count_per_category)
-	# for tok, freq in term_freq.items():
-	# 	if freq > 2:
-	# 		# lol sorry für ds statement
-	# 		# max(probability t given category: termfrequency in category/total amount of terms in category)
-	# 		oberer_bruch = max(
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'BS', tok) / term_count_per_category['BS']),
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'LU', tok) / term_count_per_category['LU']),
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'ZH', tok) / term_count_per_category['ZH']))
-	# 		# probability term: termfrequency/total amount of terms
-	# 		unterer_bruch = freq / term_count
-	# 		output.append((oberer_bruch / unterer_bruch, tok))
-	#
-	# sorted_output = sorted(output, reverse=True)
-	# # returns 50 best calgary tokens
-	# return ([tok for val, tok in sorted_output[:999]])
 
 # takes panda dataframe
 # gets training data, returns n-best calgary tokens
@@ -273,61 +231,6 @@ def calgary_ngram(data_in, ngram):
 	# returns 25 most significant n-grams
 	return ([tok for val, tok in sorted_output[:199]])
 
-	# Alter Code
-	# # contains tuples of the form (category, sentence)
-	# category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
-	# # split up sentences in n-grams (including whitespace)
-	# category_tokens = []
-	# for elem in category_text:
-	# 	tokens = []
-	# 	# creates bi-/tri-/four-/etc-grams
-	# 	# http://locallyoptimal.com/blog/2013/01/20/elegant-n-gram-generation-in-python/
-	# 	tup = zip(*[list(elem[1])[i:] for i in range(ngram)])
-	# 	for e in tup:
-	# 		tokens.append(''.join(e))
-	# 	category_tokens.append((elem[0], tokens))
-	#
-	# # structure: {category: freq}
-	# term_freq = {}
-	# # structure: {(category, token):freq}
-	# term_freq_per_category = {}
-	# term_count = 0
-	# term_count_per_category = {'BE': 0, 'BS': 0, 'LU': 0, 'ZH': 0}
-	#
-	# for cat, text in category_tokens:
-	# 	for token in text:
-	# 		if token in term_freq.keys():
-	# 			term_freq[token] += 1
-	# 		else:
-	# 			term_freq[token] = 1
-	# 		if (cat, token) in term_freq_per_category.keys():
-	# 			term_freq_per_category[(cat, token)] += 1
-	# 		else:
-	# 			term_freq_per_category[(cat, token)] = 1
-	#
-	# 		term_count += 1
-	# 		term_count_per_category[cat] += 1
-	#
-	# # structure: [(calgary value, tok)]
-	# output = []
-	#
-	# print(term_count_per_category)
-	# for tok, freq in term_freq.items():
-	# 	if freq > 2:
-	# 		# lol sorry für ds statement
-	# 		# max(probability t given category: termfrequency in category/total amount of terms in category)
-	# 		oberer_bruch = max(
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'BS', tok) / term_count_per_category['BS']),
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'LU', tok) / term_count_per_category['LU']),
-	# 			(get_term_freq_per_cat(term_freq_per_category, 'ZH', tok) / term_count_per_category['ZH']))
-	# 		# probability term: termfrequency/total amount of terms
-	# 		unterer_bruch = freq / term_count
-	# 		output.append((oberer_bruch / unterer_bruch, tok))
-	#
-	# sorted_output = sorted(output, reverse=True)
-	# # returns 25 most significant n-grams
-	# return ([tok for val, tok in sorted_output[:199]])
 
 def average_word_length(sentence_in):
 	sum = 0.0
@@ -337,6 +240,7 @@ def average_word_length(sentence_in):
 		count += 1
 	return (sum / count)
 
+
 def get_list_of_double_vocals():
 	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
 	double_vocals = []
@@ -345,11 +249,13 @@ def get_list_of_double_vocals():
 			double_vocals.append(''+char1+char2)
 	return double_vocals
 
+
 def get_term_freq_per_cat(dict, cat, token):
 	if (cat, token) in dict.keys():
 		return dict[(cat, token)]
 	else:
 		return 0
+
 
 # takes sentence and calgary-list and returns all the words that match from the list
 def map_calgary(sentence, c_list):
@@ -360,17 +266,28 @@ def map_calgary(sentence, c_list):
 
 	return (" ").join(output)
 
-#function that creates subpipelines for transformer 
+
+def map_calgary_words(sentence, c_list):
+	output = []
+	for tok in c_list:
+		if re.search('(\W'+tok+'\W|^'+tok+'\W|\W'+tok+'$)', sentence):
+			output.append(tok)
+	return (" ").join(output)
+
+
+# function that creates subpipelines for transformer
 def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 	return (subpipeline_name,Pipeline([
 		('selector',DataFrameColumnExtracter(columname)),
 		(name,vectorizer)]))
 
 
-#function to append new columns with features to the pandas dataframe
+# function to append new columns with features to the pandas dataframe
 def append_feature_columns(train_data_transformed,test_data_transformed,function,columname,calgary_tokens):
 	train_map = train_data_transformed.copy()
 	if function == map_calgary:
+		train_map['Text'] = train_map['Text'].apply(function, c_list=calgary_tokens)
+	elif function == map_calgary_words:
 		train_map['Text'] = train_map['Text'].apply(function, c_list=calgary_tokens)
 	# in order to apply functions with no arguments
 	else:
@@ -383,6 +300,8 @@ def append_feature_columns(train_data_transformed,test_data_transformed,function
 	# in order to apply functions with no arguments
 	if function == map_calgary:
 		test_map['Text'] = test_map['Text'].apply(function, c_list=calgary_tokens)
+	elif function == map_calgary_words:
+		test_map['Text'] = test_map['Text'].apply(function, c_list=calgary_tokens)
 	else:
 		test_map['Text'] = test_map['Text'].apply(function)
 
@@ -391,13 +310,14 @@ def append_feature_columns(train_data_transformed,test_data_transformed,function
 
 	return train_data_transformed, test_data_transformed
 
+
 def classify(train_data, test_data):
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer = [
-		# create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
-		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
@@ -405,22 +325,11 @@ def classify(train_data, test_data):
 	]
 
 	transformer2 = [ # To test changes to transformer
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
-		create_subpipeline('count_vec',
-						   TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'),
-						   'subpipeline_countvocals', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
-	]
-
-	transformer3 = [ # only count of words and chars
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(ngram_range=(2,6), analyzer='char'), 'subpipeline_text_char', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text_words', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1,1)), 'subpipeline_text_words', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1,1)), 'subpipeline_text_chars', 'Text'),
+		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
@@ -428,17 +337,17 @@ def classify(train_data, test_data):
 	]
 
 	transformer_n_grams = [
-		create_subpipeline('count_vec', CountVectorizer(ngram_range=(2,2), analyzer='word', token_pattern=word_regex), 'subpipeline_word_n_grams', 'Text'),
-		create_subpipeline('count_vec', CountVectorizer(ngram_range=(2,5), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
+		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='word'), 'subpipeline_word_n_grams', 'Text'),
+		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,5), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
 		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text')
 	]
 
 	transformer_mlp = [
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches'),
-		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
@@ -465,6 +374,10 @@ def classify(train_data, test_data):
 	pipeline_MLP = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer_mlp)),
 		('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
+	])
+	pipeline_MLP2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer_mlp)),
+		('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300, alpha=9.9999999999999995e-07))
 	])
 
 	pipeline_ridge = Pipeline([
@@ -528,7 +441,7 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', VotingClassifier(estimators=[
 			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300,  alpha=9.9999999999999995e-07)),
 			], voting='soft', weights=[2, 1], n_jobs=-1)
 		)
 	])
@@ -543,9 +456,10 @@ def classify(train_data, test_data):
 
 
 	# Evaluate pipelines
-	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
+	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
 	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
+	# evaluate(train_data, pipeline_MLP2, 'MLP2')
 	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
 	#
 	# evaluate(train_data, pipeline_ridge, 'Ridge')
@@ -562,7 +476,7 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
 	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
 	evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
-	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
+	evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 
 	#train_text = train_data['Text'].values
@@ -572,7 +486,7 @@ def classify(train_data, test_data):
 	#test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
-	pipeline = pipeline_voting_classifier
+	pipeline = pipeline_Multinomial
 	train_y = train_data['Label'].values.astype(str)
 	train_text = train_data
 
@@ -592,8 +506,9 @@ def evaluate(train_data, pipeline, name: str):
 
 	print(name+ ':')
 
-	# UNCOMMENT UM nur mit train data zu arbeiten
-	k_fold = KFold(n_splits=3)
+	sum = 0.0
+	n_splits = 7
+	k_fold = KFold(n_splits=n_splits)
 	for train_indices, test_indices in k_fold.split(train_data):
 		train_text = train_data.iloc[train_indices]
 		train_y = train_data.iloc[train_indices]['Label'].values.astype(str)
@@ -606,7 +521,10 @@ def evaluate(train_data, pipeline, name: str):
 		pipeline.fit(train_text, train_y)
 
 		prediction = pipeline.predict(test_text)
-		print('\t'+str(accuracy_score(test_y, prediction)))
+		accuracy = accuracy_score(test_y, prediction)
+		print('\t'+str(accuracy))
+		sum += accuracy
+	print('Average:', sum/n_splits)
 
 
 def visualize(train_data):
@@ -634,6 +552,16 @@ def visualize(train_data):
 		print('\tAdded '+label+'_plot.pdf')
 	print('Done adding plots.')
 
+
+def print_features(train_data, test_data):
+	# print some of the topmost data to show created features and their values
+	print('Train data:')
+	print(train_data.head(30))
+	print("------")
+	print('Test data:')
+	print(test_data.head(30))
+
+
 def main():
 	train_data = read_csv(trainfile)  # train_data should not be changed, so it will only contain the original text
 	test_data = read_csv(testfile)  # test_data should not be changed, so it will only contain the original text
@@ -644,10 +572,9 @@ def main():
 	train_data_transformed = read_csv(trainfile)
 	test_data_transformed = read_csv(testfile)
 
-	# create a list of lists with tokens to be evaluated 
-
+	# create a list of lists with tokens to be evaluated
 	token_lists = [
-		(calgary(train_data),'calgarymatches'),
+		(calgary(train_data), 'calgarymatches'),
 		(calgary_ngram(train_data,2),'calgarybimatches'),
 		(calgary_ngram(train_data,3),'calgarytrimatches'),
 		(calgary_ngram(train_data,4),'calgaryfourmatches'),
@@ -655,57 +582,45 @@ def main():
 	]
 
 	print('...adding features')
-	for (token_list, columname) in token_lists:
-		train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
-																			   test_data_transformed, map_calgary,
-																			   columname, token_list)
 
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
-																		   test_data_transformed, average_word_length,
-																		   'averagewordlength', calgary_tokens=None)
+	for (token_list, columname) in token_lists:
+		train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgary, columname, token_list)
+
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgary_words, 'calgarymatches_exact_match', calgary_tokens)
+
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, average_word_length, 'averagewordlength', calgary_tokens=None)
 
 	print('Done adding features.')
 
-	# print(test_data_transformed)
-	# print(train_data_transformed)
+	# Print subset of features to console
+	# print_features(train_data_transformed, test_data_transformed)
 
-	# print some of the topmost data to show created features and their values
-	# print(test_data_transformed.head(30))
-	# print("------")
-	# print(train_data_transformed.head(30))
-
-	# Visualization of features
+	# Create plots for train data
 	# visualize(train_data_transformed)
 
-
-	# print(train_data_transformed['calgarytrimatches'].head(10))
-
 	# Classify
-	# train_data.drop('Id',axis=1)
-	# print(list(test_data_transformed))
-	# print(list(train_data_transformed))
 	predictions = classify(train_data_transformed, test_data_transformed)
-
-	# TODO: apply map_calgary(sentence, calgary_tokens) for each sentence in panda df and add result to new column
-
 	write_scores(resultfile, predictions)
 
-# cross_validate(train_data=train_data, k=3)
-
-# grid_search(
-#	par={
-#		"count_vectorizer__ngram_range": [(1, 4), (1,6), (1,8)]
-#		# "count_vectorizer__analyzer": ['char', 'char_wb']
-#		# "count_vectorizer__stop_words": [[], ['uf, in, aber, a']], # ohni isch besser lol
-		# "count_vectorizer__token_pattern": [word_regex, '(?u)\\b\\B\\B+\\b'] # Umlute sind scho no dr Hit
-#		# "count_vectorizer__max_features": [None, 1000, 100] # None
-#	},
-#	pipeline= Pipeline([
-#		('count_vectorizer', CountVectorizer(analyzer="char", token_pattern='(?u)\\b\[\wöäüÖÄÜìòè]\[\wöäüÖÄÜìòè]+\\b')),
-#		('classifier', MultinomialNB())
-#	]),
-#	train_data=train_data
-# )
+	# Perform grid search for a given transformer
+	# grid_search(
+	# 	transformer = [
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
+	# 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+	# 	],
+	# 	train_data=train_data_transformed,
+	# 	param_grid={
+	# 		'solver': ['adam', 'lbfgs'],
+	# 		'activation': ['logistic', 'relu']
+	# 	},
+	# 	estimator=MLPClassifier()
+	# )
 
 if __name__ == '__main__':
 	main()
