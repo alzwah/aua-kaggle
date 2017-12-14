@@ -391,7 +391,11 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BE', 'unique_BE'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_LU', 'unique_LU'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH')
 	]
 
 	transformer2 = [ # To test changes to transformer
@@ -526,8 +530,8 @@ def classify(train_data, test_data):
 
 
 	# Evaluate pipelines
-	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
+	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
+	evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
 	# evaluate(train_data, pipeline_MLP2, 'MLP2')
 	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
@@ -545,8 +549,8 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_logistic_regression, 'Logistic regression')
 	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
 	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
-	evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
-	evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
+	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
+	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 
 	#train_text = train_data['Text'].values
@@ -675,8 +679,8 @@ def main():
 	# visualize(train_data_transformed)
 
 	# Classify
-	# predictions = classify(train_data_transformed, test_data_transformed)
-	# write_scores(resultfile, predictions)
+	predictions = classify(train_data_transformed, test_data_transformed)
+	write_scores(resultfile, predictions)
 
 	# Perform grid search for a given transformer
 	# grid_search(
