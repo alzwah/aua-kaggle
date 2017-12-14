@@ -230,6 +230,55 @@ def calgary_ngram(data_in, ngram):
 	sorted_output = sorted(output, reverse=True)
 	# returns 25 most significant n-grams
 	return ([tok for val, tok in sorted_output[:199]])
+	
+	
+#returns a list of tokens that only appear in one category
+def unique_tokens(data_in):
+    # contains tuples of the form (category, sentence)
+	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
+    # build dict {category: [tokens]}
+	category_tokens = {'BE': [], 'BS': [], 'LU': [], 'ZH': []}
+	for elem in category_text:
+		tokens = elem[1].split(" ")
+		category_tokens[elem[0]].extend(tokens)
+	
+	BE = set(category_tokens['BE'])
+	BS = set(category_tokens['BS'])
+	LU = set(category_tokens['LU'])
+	ZH = set(category_tokens['ZH'])
+	
+	#print((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
+	return list((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
+		
+	
+	
+#returns a list of tokens that appear in 3/4 of categories (e.g. appear in BS and LU and ZH but NOT BE)
+def unique_missing_tokens(data_in):
+    # contains tuples of the form (category, sentence)
+	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
+    # build dict {category: [tokens]}
+	category_tokens = {'BE': [], 'BS': [], 'LU': [], 'ZH': []}
+	for elem in category_text:
+		tokens = elem[1].split(" ")
+		category_tokens[elem[0]].extend(tokens)
+		
+	BE = set(category_tokens['BE'])
+	BS = set(category_tokens['BS'])
+	LU = set(category_tokens['LU'])
+	ZH = set(category_tokens['ZH'])
+	
+	missing_tokens = []
+	print((BE)-(BS & LU & ZH))
+	missing_tokens.extend(list((BE)-(BS & LU & ZH)))
+	print((BS)-(BE & LU & ZH))
+	missing_tokens.extend(list((BS) -(BS & LU & ZH)))
+	print((LU)-(BS & BE & ZH))
+	missing_tokens.extend(list((LU) - (BE & BS & ZH)))
+	print((ZH)-(BS & LU & BE))
+	missing_tokens.extend(list((ZH) - (BE & BS & LU)))
+	
+	return missing_tokens
+	
 
 
 def average_word_length(sentence_in):
