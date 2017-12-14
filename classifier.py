@@ -58,9 +58,7 @@ trainfile = arguments.trainfile
 testfile = arguments.testfile
 resultfile = arguments.resultfile
 
-word_regex = '(?u)(?:\b)?\w*(?:\b)?'
 
-# s
 class DataFrameColumnExtracter(TransformerMixin):
 	def __init__(self, column):
 		self.column = column
@@ -75,9 +73,11 @@ class DataFrameColumnExtracter(TransformerMixin):
 	def get_params(self):
 		return None
 
+
 def read_csv(filename):
 	data = pd.read_csv(filename,encoding='utf-8')
 	return data
+
 
 def write_scores(filename, predictions):
 	predictions = [(i + 1, j) for i, j in enumerate(predictions)]
@@ -246,12 +246,29 @@ def unique_tokens(data_in):
 	BS = set(category_tokens['BS'])
 	LU = set(category_tokens['LU'])
 	ZH = set(category_tokens['ZH'])
-	
-	#print((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
-	return list((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
-		
-	
-	
+
+	return {'BE': (BE - (BS & LU & ZH)), 'BS': (BS - (BE & LU & ZH)), 'LU': (LU - (BE & BS & ZH)), 'ZH': (ZH - (BE & BS & LU & ZH))}
+
+	#
+	# print((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
+	# return list((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
+
+
+def apply_unique_tokens(sentence, word_list):
+	output = []
+
+	for word in re.findall('\w+', sentence):
+		if word in word_list:
+			output.append(word)
+	return ' '.join(output)
+
+	# return
+	# for word in word_list:
+	# 	if re.search('\w+', sentence):
+	# 		output.append(word)
+	# return ' '.join(output)
+
+
 #returns a list of tokens that appear in 3/4 of categories (e.g. appear in BS and LU and ZH but NOT BE)
 def unique_missing_tokens(data_in):
     # contains tuples of the form (category, sentence)
@@ -280,8 +297,8 @@ def unique_missing_tokens(data_in):
 	return missing_tokens
 	
 
-
 def average_word_length(sentence_in):
+	""" Calculate the average word length in a sentence. """
 	sum = 0.0
 	count = 0
 	for word in sentence_in.split(sep=" "):
@@ -306,7 +323,7 @@ def get_term_freq_per_cat(dict, cat, token):
 		return 0
 
 
-# takes sentence and calgary-list and returns all the words that match from the list
+# takes sentence and calgary-list and returns all the substrings that match character sequences from the list
 def map_calgary(sentence, c_list):
 	output = []
 	for tok in c_list:
@@ -315,7 +332,7 @@ def map_calgary(sentence, c_list):
 
 	return (" ").join(output)
 
-
+# takes sentence and calgary-list and returns all the words that match words from the list
 def map_calgary_words(sentence, c_list):
 	output = []
 	for tok in c_list:
@@ -332,12 +349,14 @@ def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 
 
 # function to append new columns with features to the pandas dataframe
-def append_feature_columns(train_data_transformed,test_data_transformed,function,columname,calgary_tokens):
+def append_feature_columns(train_data_transformed, test_data_transformed, function, columname, function_argument):
 	train_map = train_data_transformed.copy()
 	if function == map_calgary:
-		train_map['Text'] = train_map['Text'].apply(function, c_list=calgary_tokens)
+		train_map['Text'] = train_map['Text'].apply(function, c_list=function_argument)
 	elif function == map_calgary_words:
-		train_map['Text'] = train_map['Text'].apply(function, c_list=calgary_tokens)
+		train_map['Text'] = train_map['Text'].apply(function, c_list=function_argument)
+	elif function == apply_unique_tokens:
+		train_map['Text'] = train_map['Text'].apply(function, word_list=function_argument)
 	# in order to apply functions with no arguments
 	else:
 		train_map['Text'] = train_map['Text'].apply(function)
@@ -348,9 +367,11 @@ def append_feature_columns(train_data_transformed,test_data_transformed,function
 	test_map = test_data_transformed.copy()
 	# in order to apply functions with no arguments
 	if function == map_calgary:
-		test_map['Text'] = test_map['Text'].apply(function, c_list=calgary_tokens)
+		test_map['Text'] = test_map['Text'].apply(function, c_list=function_argument)
 	elif function == map_calgary_words:
-		test_map['Text'] = test_map['Text'].apply(function, c_list=calgary_tokens)
+		test_map['Text'] = test_map['Text'].apply(function, c_list=function_argument)
+	elif function == apply_unique_tokens:
+		test_map['Text'] = test_map['Text'].apply(function, word_list=function_argument)
 	else:
 		test_map['Text'] = test_map['Text'].apply(function)
 
@@ -637,19 +658,25 @@ def main():
 
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgary_words, 'calgarymatches_exact_match', calgary_tokens)
 
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, average_word_length, 'averagewordlength', calgary_tokens=None)
+	unique_token_list = unique_tokens(train_data)
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_BE', unique_token_list['BE'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_BS', unique_token_list['BS'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_LU', unique_token_list['LU'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_ZH', unique_token_list['ZH'])
+
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, average_word_length, 'averagewordlength', function_argument=None)
 
 	print('Done adding features.')
 
 	# Print subset of features to console
-	# print_features(train_data_transformed, test_data_transformed)
+	print_features(train_data_transformed, test_data_transformed)
 
 	# Create plots for train data
 	# visualize(train_data_transformed)
 
 	# Classify
-	predictions = classify(train_data_transformed, test_data_transformed)
-	write_scores(resultfile, predictions)
+	# predictions = classify(train_data_transformed, test_data_transformed)
+	# write_scores(resultfile, predictions)
 
 	# Perform grid search for a given transformer
 	# grid_search(
