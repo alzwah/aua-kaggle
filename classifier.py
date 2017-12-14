@@ -452,7 +452,7 @@ def classify(train_data, test_data):
 	])
 
 	pipeline_Multinomial2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_calgari)),
+		('union', FeatureUnion(transformer_list=transformer_unique)),
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
 
@@ -568,13 +568,25 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', VotingClassifier(estimators=[
 			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 			('Linear SVC', LinearSVC()),
 			('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
-		], voting='hard', n_jobs=-1)
+		], voting='hard', n_jobs=1)
 		 )
 	])
 
-
+	pipeline_voting_classifier_meta = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer_all)),
+		('clf', VotingClassifier(estimators=[
+			VotingClassifier(estimators=[
+				('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+				('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+			], voting='soft', weights=[1.5, 1], n_jobs=-1),
+			('Linear SVC', LinearSVC()),
+			('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
+		], voting='hard', n_jobs=1)
+		 )
+	])
 
 	# Evaluate pipelines
 	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
@@ -604,6 +616,8 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 	evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
+	evaluate(train_data, pipeline_voting_classifier_meta, 'Voting meta')
+
 
 	#train_text = train_data['Text'].values
 	#train_y = train_data['Label'].values
