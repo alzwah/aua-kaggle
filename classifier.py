@@ -230,9 +230,68 @@ def calgary_ngram(data_in, ngram):
 	sorted_output = sorted(output, reverse=True)
 	# returns 25 most significant n-grams
 	return ([tok for val, tok in sorted_output[:199]])
-	
-	
-#returns a list of tokens that only appear in one category
+
+
+def list_of_bigrams(data_in):
+	# contains tuples of the form (category, sentence)
+	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
+
+	# build dict {category: [tokens]}
+	category_tokens = {'BE': {}, 'BS': {}, 'LU': {}, 'ZH': {}}
+	for elem in category_text:
+		# count frequencies for all occuring bigrams
+		for bigram in zip(*[list(elem[1][i:]) for i in range(2)]):
+			dict = category_tokens[elem[0]]
+			key = bigram[0]+bigram[1]
+			if key in dict:
+				dict[key] = dict[key]+1
+			else:
+				dict[key] = 1
+
+	Labels = ['BE', 'BS', 'LU', 'ZH']
+	category_lists = {'BE': [], 'BS': [], 'LU': [], 'ZH': []}
+	for label in Labels:
+		category_lists[label] = sorted(category_tokens[label].keys(), key= lambda k: category_tokens[label][k])
+	return category_lists
+
+
+def get_bigram_frequency_list(sentence):
+	bigram_dict = {}
+	for bigram in zip(*[sentence[i:] for i in range(2)]):
+		key = bigram[0] + bigram[1]
+		if key in bigram_dict:
+			bigram_dict[key] = bigram_dict[key] + 1
+		else:
+			bigram_dict[key] = 1
+	bigram_list = sorted(bigram_dict.keys(), key= lambda k: bigram_dict[k])
+	return bigram_list
+
+
+# calculate error in n-gram lists inspired by Canvar & Trenkle 1994, N-Gram-Based Text Categorization
+def apply_bigram_frequency(sentence, bigram_list):
+	sentence_bigrams = get_bigram_frequency_list(sentence)
+	if len(sentence_bigrams) == 0:
+		return 0
+	out_of_place = 0
+	max_value = len(bigram_list)
+	max_index = len(bigram_list)
+
+	for s_index, sentence_bigram in enumerate(sentence_bigrams):
+		found = False
+		for bigram_index, bigram in enumerate(bigram_list[0: max_index]):
+			if bigram != sentence_bigram:
+				continue
+			else:
+				out_of_place += abs(s_index-bigram_index)
+				found = True
+				break
+		if not found:
+			out_of_place += max_value
+
+	return str(out_of_place/len(sentence))
+
+
+# returns a list of tokens that only appear in one category
 def unique_tokens(data_in):
     # contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
@@ -356,6 +415,8 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 		train_map['Text'] = train_map['Text'].apply(function, c_list=function_argument)
 	elif function == apply_unique_tokens:
 		train_map['Text'] = train_map['Text'].apply(function, word_list=function_argument)
+	elif function == apply_bigram_frequency:
+		train_map['Text'] = train_map['Text'].apply(function, bigram_list=function_argument)
 	# in order to apply functions with no arguments
 	else:
 		train_map['Text'] = train_map['Text'].apply(function)
@@ -371,6 +432,8 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 		test_map['Text'] = test_map['Text'].apply(function, c_list=function_argument)
 	elif function == apply_unique_tokens:
 		test_map['Text'] = test_map['Text'].apply(function, word_list=function_argument)
+	elif function == apply_bigram_frequency:
+		test_map['Text'] = test_map['Text'].apply(function, bigram_list=function_argument)
 	else:
 		test_map['Text'] = test_map['Text'].apply(function)
 
@@ -395,8 +458,16 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BE', 'unique_BE'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_LU', 'unique_LU'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH')
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
+
+	# (subpipeline_name, Pipeline([
+	# 	('selector', DataFrameColumnExtracter(columname)),
+	# 	(name, vectorizer)]))
 
 	transformer_calgari = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
@@ -446,151 +517,151 @@ def classify(train_data, test_data):
 	]
 
 	# Preparing potential pipelines
-	pipeline_Multinomial = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
-	])
-
+	# pipeline_Multinomial = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
+	# ])
+	#
 	pipeline_Multinomial2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_unique)),
+		('union', FeatureUnion(transformer_list=transformer_dial_big)),
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
-
-	pipeline_KNeighbors = Pipeline([
-			('union', FeatureUnion(transformer_list = transformer_all)),
-			('clf', KNeighborsClassifier(n_neighbors = 15))
-			])
-
-	pipeline_MLP = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_mlp)),
-		('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
-	])
-	pipeline_MLP2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_mlp)),
-		('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300, alpha=9.9999999999999995e-07))
-	])
-
-	pipeline_ridge = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', RidgeClassifier())
-	])
-
-	pipeline_ridge_cv = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', RidgeClassifierCV())
-	])
-	pipeline_nearest_centroid = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', NearestCentroid())
-	])
-	pipeline_bernoulliNB = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', BernoulliNB())
-	])
-	pipeline_bernoulliNB2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_calgari)),
-		('clf', BernoulliNB())
-	])
-
-	pipeline_one_v_one = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
-	])
-	pipeline_one_v_rest = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
-	])
-	pipeline_decision_tree = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', DecisionTreeClassifier())
-	])
-
-	pipeline_svc = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', SVC())
-	])
-	pipeline_linear_svc = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', LinearSVC())
-	])
-	pipeline_linear_svc2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_unique)),
-		('clf', LinearSVC())
-	])
-
-	pipeline_logistic_regression = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', LogisticRegression())
-	])
-	pipeline_sgd_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_unique)),
-		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
-	])
-	pipeline_sgd_classifier2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_calgari)),
-		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
-	])
-
-	pipeline_passive_agressive = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_unique)),
-		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
-	])
-	pipeline_passive_agressive2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
-	])
-
-	pipeline_voting_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', VotingClassifier(estimators=[
-			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-			], voting='soft', weights=[1.5, 1], n_jobs=-1)
-		)
-	])
-	pipeline_voting_classifier2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', VotingClassifier(estimators=[
-			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300,  alpha=9.9999999999999995e-07)),
-			], voting='soft', weights=[2, 1], n_jobs=-1)
-		)
-	])
-
-	pipeline_ada_boost_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', AdaBoostClassifier(
-			base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
-		))
-	])
-
-	pipeline_voting_classifier_hard = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', VotingClassifier(estimators=[
-			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-			('Linear SVC', LinearSVC()),
-			('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
-		], voting='hard', n_jobs=1)
-		 )
-	])
-
-	pipeline_voting_classifier_meta = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', VotingClassifier(estimators=[
-			VotingClassifier(estimators=[
-				('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-				('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-			], voting='soft', weights=[1.5, 1], n_jobs=-1),
-			('Linear SVC', LinearSVC()),
-			('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
-		], voting='hard', n_jobs=1)
-		 )
-	])
+	#
+	# pipeline_KNeighbors = Pipeline([
+	# 		('union', FeatureUnion(transformer_list = transformer_all)),
+	# 		('clf', KNeighborsClassifier(n_neighbors = 15))
+	# 		])
+	#
+	# pipeline_MLP = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
+	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
+	# ])
+	# pipeline_MLP2 = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
+	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300, alpha=9.9999999999999995e-07))
+	# ])
+	#
+	# pipeline_ridge = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', RidgeClassifier())
+	# ])
+	#
+	# pipeline_ridge_cv = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', RidgeClassifierCV())
+	# ])
+	# pipeline_nearest_centroid = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', NearestCentroid())
+	# ])
+	# pipeline_bernoulliNB = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', BernoulliNB())
+	# ])
+	# pipeline_bernoulliNB2 = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_calgari)),
+	# 	('clf', BernoulliNB())
+	# ])
+	#
+	# pipeline_one_v_one = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
+	# ])
+	# pipeline_one_v_rest = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
+	# ])
+	# pipeline_decision_tree = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', DecisionTreeClassifier(max_features=0.8))
+	# ])
+	#
+	# pipeline_svc = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', SVC())
+	# ])
+	# pipeline_linear_svc = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', LinearSVC())
+	# ])
+	# pipeline_linear_svc2 = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
+	# 	('clf', LinearSVC())
+	# ])
+	#
+	# pipeline_logistic_regression = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', LogisticRegression())
+	# ])
+	# pipeline_sgd_classifier = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
+	# 	('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
+	# ])
+	# pipeline_sgd_classifier2 = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_calgari)),
+	# 	('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
+	# ])
+	#
+	# pipeline_passive_agressive = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
+	# 	('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
+	# ])
+	# pipeline_passive_agressive2 = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
+	# ])
+	#
+	# pipeline_voting_classifier = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', VotingClassifier(estimators=[
+	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+	# 		], voting='soft', weights=[1.5, 1], n_jobs=-1)
+	# 	)
+	# ])
+	# pipeline_voting_classifier2 = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', VotingClassifier(estimators=[
+	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300,  alpha=9.9999999999999995e-07)),
+	# 		], voting='soft', weights=[2, 1], n_jobs=-1)
+	# 	)
+	# ])
+	#
+	# pipeline_ada_boost_classifier = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', AdaBoostClassifier(
+	# 		base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
+	# 	))
+	# ])
+	#
+	# pipeline_voting_classifier_hard = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', VotingClassifier(estimators=[
+	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+	# 		('Linear SVC', LinearSVC()),
+	# 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
+	# 	], voting='hard', n_jobs=-1)
+	# 	 )
+	# ])
+	#
+	# pipeline_voting_classifier_meta = Pipeline([
+	# 	('union', FeatureUnion(transformer_list=transformer_all)),
+	# 	('clf', VotingClassifier(estimators=[
+	# 		VotingClassifier(estimators=[
+	# 			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	# 			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+	# 		], voting='soft', weights=[1.5, 1], n_jobs=-1),
+	# 		('Linear SVC', LinearSVC()),
+	# 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
+	# 	], voting='hard', n_jobs=-1)
+	# 	)
+	# ])
 
 	# Evaluate pipelines
 	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
+	evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
 	# evaluate(train_data, pipeline_MLP2, 'MLP2')
 	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
@@ -615,8 +686,8 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
-	evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
-	evaluate(train_data, pipeline_voting_classifier_meta, 'Voting meta')
+	# evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
+	# evaluate(train_data, pipeline_voting_classifier_meta, 'Voting meta')
 
 
 	#train_text = train_data['Text'].values
@@ -626,21 +697,21 @@ def classify(train_data, test_data):
 	#test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
-	pipeline = pipeline_Multinomial
-	train_y = train_data['Label'].values.astype(str)
-	train_text = train_data
-
-	test_text = test_data
-
-	pipeline.fit(train_data,train_y)
-	predictions = pipeline.predict(test_text)
+	# pipeline = pipeline_Multinomial
+	# train_y = train_data['Label'].values.astype(str)
+	# train_text = train_data
+	#
+	# test_text = test_data
+	#
+	# pipeline.fit(train_data,train_y)
+	# predictions = pipeline.predict(test_text)
 	# print(predictions)
 	#
 	# for i in range(0,len(predictions)):
 	# 	print(predictions[i], test_text['Text'].iloc[i])
 
 
-	return predictions
+	# return predictions
 
 def evaluate(train_data, pipeline, name: str):
 
@@ -670,13 +741,27 @@ def evaluate(train_data, pipeline, name: str):
 def visualize(train_data):
 	print('... Adding plots.')
 
+	sns.set(style="whitegrid", palette="muted")
+
 	# Plot for average word length
 	# Note: For some reason this has to happen before the calgari plots or the plot will be wrong.
 	sns.boxplot(x='Label', y='averagewordlength', hue=None, data=train_data)
 	plt.savefig('plots/averagewordlength_plot.pdf')
 	print('\tAdded averagewordlength_plot.pdf')
 
-	# Plots for calgari
+	# try:
+	# 	sns.pairplot(
+	# 		data=train_data,
+	# 		x_vars=['bigram_frequency_BE','bigram_frequency_BS','bigram_frequency_LU','bigram_frequency_ZH'],
+	# 		y_vars=['Label'],
+	# 	)
+	# 	plt.savefig('plots/bigram_frequency_plot.pdf')
+	# 	print('\tAdded bigram_frequency_plot.pdf')
+	# except ValueError:
+	# 	pass
+
+
+	# # Plots for calgari
 	calgari_labels = ['calgarybimatches', 'calgarytrimatches', 'calgaryfourmatches', 'calgaryfivematches']
 	plt.figure(figsize=(100,10))
 	for label in calgari_labels:
@@ -712,7 +797,7 @@ def main():
 	train_data_transformed = read_csv(trainfile)
 	test_data_transformed = read_csv(testfile)
 
-	# create a list of lists with tokens to be evaluated
+	# # create a list of lists with tokens to be evaluated
 	token_lists = [
 		(calgary(train_data), 'calgarymatches'),
 		(calgary_ngram(train_data,2),'calgarybimatches'),
@@ -736,17 +821,23 @@ def main():
 
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, average_word_length, 'averagewordlength', function_argument=None)
 
+	bigrams = list_of_bigrams(train_data)
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BE', function_argument=bigrams['BE'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BS', function_argument=bigrams['BS'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_LU', function_argument=bigrams['LU'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_ZH', function_argument=bigrams['ZH'])
+
 	print('Done adding features.')
 
 	# Print subset of features to console
-	print_features(train_data_transformed, test_data_transformed)
+	# print_features(train_data_transformed, test_data_transformed)
 
 	# Create plots for train data
 	# visualize(train_data_transformed)
 
 	# Classify
 	predictions = classify(train_data_transformed, test_data_transformed)
-	write_scores(resultfile, predictions)
+	# write_scores(resultfile, predictions)
 
 	# Perform grid search for a given transformer
 	# grid_search(
