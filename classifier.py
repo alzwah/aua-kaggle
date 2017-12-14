@@ -347,8 +347,8 @@ def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 # function to append new columns with features to the pandas dataframe
 def append_feature_columns(train_data_transformed, test_data_transformed, function, columname, function_argument):
 	# uncomment when using with all data
-	#train_data_transformed = train_data_transformed.rename(columns=' Text':'Text')
-	#test_data_transformed = test_data_transformed.rename(columns = ' Text':'Text')
+	train_data_transformed = train_data_transformed.rename(columns={' Text':'Text'})
+	test_data_transformed = test_data_transformed.rename(columns = {' Text':'Text'})
 	train_map = train_data_transformed.copy()
 	if function == map_calgary:
 		train_map['Text'] = train_map['Text'].apply(function, c_list=function_argument)
