@@ -382,7 +382,7 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 
 def classify(train_data, test_data):
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
-	transformer = [
+	transformer_all = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
@@ -398,7 +398,7 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH')
 	]
 
-	transformer2 = [ # To test changes to transformer
+	transformer_calgari = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
@@ -412,7 +412,7 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
 	]
 
-	transformer3 = [ # To test changes to transformer
+	transformer_unique = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
@@ -447,17 +447,17 @@ def classify(train_data, test_data):
 
 	# Preparing potential pipelines
 	pipeline_Multinomial = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
 
 	pipeline_Multinomial2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer2)),
+		('union', FeatureUnion(transformer_list=transformer_calgari)),
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
 
 	pipeline_KNeighbors = Pipeline([
-			('union', FeatureUnion(transformer_list = transformer)),
+			('union', FeatureUnion(transformer_list = transformer_all)),
 			('clf', KNeighborsClassifier(n_neighbors = 15))
 			])
 
@@ -471,77 +471,77 @@ def classify(train_data, test_data):
 	])
 
 	pipeline_ridge = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', RidgeClassifier())
 	])
 
 	pipeline_ridge_cv = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', RidgeClassifierCV())
 	])
 	pipeline_nearest_centroid = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', NearestCentroid())
 	])
 	pipeline_bernoulliNB = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', BernoulliNB())
 	])
 	pipeline_bernoulliNB2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer2)),
+		('union', FeatureUnion(transformer_list=transformer_calgari)),
 		('clf', BernoulliNB())
 	])
 
 	pipeline_one_v_one = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
 	])
 	pipeline_one_v_rest = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
 	])
 	pipeline_decision_tree = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', DecisionTreeClassifier())
 	])
 
 	pipeline_svc = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', SVC())
 	])
 	pipeline_linear_svc = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', LinearSVC())
 	])
 	pipeline_linear_svc2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer3)),
+		('union', FeatureUnion(transformer_list=transformer_unique)),
 		('clf', LinearSVC())
 	])
 
 	pipeline_logistic_regression = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', LogisticRegression())
 	])
 	pipeline_sgd_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer3)),
+		('union', FeatureUnion(transformer_list=transformer_unique)),
 		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
 	])
 	pipeline_sgd_classifier2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer2)),
+		('union', FeatureUnion(transformer_list=transformer_calgari)),
 		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
 	])
 
 	pipeline_passive_agressive = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer3)),
+		('union', FeatureUnion(transformer_list=transformer_unique)),
 		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
 	])
 	pipeline_passive_agressive2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
 	])
 
 	pipeline_voting_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', VotingClassifier(estimators=[
 			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
@@ -549,7 +549,7 @@ def classify(train_data, test_data):
 		)
 	])
 	pipeline_voting_classifier2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', VotingClassifier(estimators=[
 			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300,  alpha=9.9999999999999995e-07)),
@@ -558,10 +558,20 @@ def classify(train_data, test_data):
 	])
 
 	pipeline_ada_boost_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', AdaBoostClassifier(
 			base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
 		))
+	])
+
+	pipeline_voting_classifier_hard = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer_all)),
+		('clf', VotingClassifier(estimators=[
+			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('Linear SVC', LinearSVC()),
+			('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
+		], voting='hard', n_jobs=-1)
+		 )
 	])
 
 
@@ -577,22 +587,23 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_ridge_cv, 'RidgeCV')
 	# evaluate(train_data, pipeline_nearest_centroid, 'NearestCentroid')
 	# evaluate(train_data, pipeline_nearest_centroid_2, 'NearestCentroid')
-	evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
-	evaluate(train_data, pipeline_bernoulliNB2, 'BernoulliNB')
+	# evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
+	# evaluate(train_data, pipeline_bernoulliNB2, 'BernoulliNB')
 	# evaluate(train_data, pipeline_one_v_one, 'One v. one, chosen estimator MultinomialNB')
 	# evaluate(train_data, pipeline_one_v_rest, 'One v. rest, chosen estimator MultinomialNB')
 	# evaluate(train_data, pipeline_decision_tree, 'Decision tree') # ca. 62%
 	# evaluate(train_data, pipeline_svc, 'SVC') # ca. 26%
-	evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
-	evaluate(train_data, pipeline_linear_svc2, 'Linear SVC')
+	# evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
+	# evaluate(train_data, pipeline_linear_svc2, 'Linear SVC')
 	# evaluate(train_data, pipeline_logistic_regression, 'Logistic regression')
-	evaluate(train_data, pipeline_sgd_classifier, 'SGD')
-	evaluate(train_data, pipeline_sgd_classifier2, 'SGD')
-	evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
-	evaluate(train_data, pipeline_passive_agressive2, 'Passive agressive')
+	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
+	# evaluate(train_data, pipeline_sgd_classifier2, 'SGD')
+	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
+	# evaluate(train_data, pipeline_passive_agressive2, 'Passive agressive')
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
+	evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
 
 	#train_text = train_data['Text'].values
 	#train_y = train_data['Label'].values
