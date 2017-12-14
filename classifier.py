@@ -247,11 +247,7 @@ def unique_tokens(data_in):
 	LU = set(category_tokens['LU'])
 	ZH = set(category_tokens['ZH'])
 
-	return {'BE': (BE - (BS & LU & ZH)), 'BS': (BS - (BE & LU & ZH)), 'LU': (LU - (BE & BS & ZH)), 'ZH': (ZH - (BE & BS & LU & ZH))}
-
-	#
-	# print((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
-	# return list((BE|BS|LU|ZH) - (BE & BS & LU & ZH))
+	return {'BE': (BE - BS - LU - ZH), 'BS': (BS - BE - LU - ZH), 'LU': (LU - BE - BS - ZH), 'ZH': (ZH - BE - BS - LU)}
 
 
 def apply_unique_tokens(sentence, word_list):
@@ -386,7 +382,8 @@ def classify(train_data, test_data):
 	transformer = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
@@ -400,14 +397,30 @@ def classify(train_data, test_data):
 
 	transformer2 = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
-		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1,1)), 'subpipeline_text_words', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1,1)), 'subpipeline_text_chars', 'Text'),
-		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
+		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+	]
+
+	transformer3 = [ # To test changes to transformer
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
+		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BE', 'unique_BE'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_LU', 'unique_LU'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH')
 	]
 
 	transformer_n_grams = [
@@ -471,6 +484,11 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', BernoulliNB())
 	])
+	pipeline_bernoulliNB2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer2)),
+		('clf', BernoulliNB())
+	])
+
 	pipeline_one_v_one = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
@@ -483,6 +501,7 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', DecisionTreeClassifier())
 	])
+
 	pipeline_svc = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', SVC())
@@ -491,18 +510,33 @@ def classify(train_data, test_data):
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', LinearSVC())
 	])
+	pipeline_linear_svc2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer3)),
+		('clf', LinearSVC())
+	])
+
 	pipeline_logistic_regression = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', LogisticRegression())
 	])
 	pipeline_sgd_classifier = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
+		('union', FeatureUnion(transformer_list=transformer3)),
 		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
 	])
+	pipeline_sgd_classifier2 = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer2)),
+		('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
+	])
+
 	pipeline_passive_agressive = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer3)),
+		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
+	])
+	pipeline_passive_agressive2 = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
 	])
+
 	pipeline_voting_classifier = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
 		('clf', VotingClassifier(estimators=[
@@ -530,8 +564,8 @@ def classify(train_data, test_data):
 
 
 	# Evaluate pipelines
-	evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
+	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
+	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
 	# evaluate(train_data, pipeline_MLP2, 'MLP2')
 	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
@@ -540,15 +574,19 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_ridge_cv, 'RidgeCV')
 	# evaluate(train_data, pipeline_nearest_centroid, 'NearestCentroid')
 	# evaluate(train_data, pipeline_nearest_centroid_2, 'NearestCentroid')
-	# evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
+	evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
+	evaluate(train_data, pipeline_bernoulliNB2, 'BernoulliNB')
 	# evaluate(train_data, pipeline_one_v_one, 'One v. one, chosen estimator MultinomialNB')
 	# evaluate(train_data, pipeline_one_v_rest, 'One v. rest, chosen estimator MultinomialNB')
-	# evaluate(train_data, pipeline_decision_tree, 'Decision tree')
+	# evaluate(train_data, pipeline_decision_tree, 'Decision tree') # ca. 62%
 	# evaluate(train_data, pipeline_svc, 'SVC') # ca. 26%
-	# evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
+	evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
+	evaluate(train_data, pipeline_linear_svc2, 'Linear SVC')
 	# evaluate(train_data, pipeline_logistic_regression, 'Logistic regression')
-	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
-	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
+	evaluate(train_data, pipeline_sgd_classifier, 'SGD')
+	evaluate(train_data, pipeline_sgd_classifier2, 'SGD')
+	evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
+	evaluate(train_data, pipeline_passive_agressive2, 'Passive agressive')
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
