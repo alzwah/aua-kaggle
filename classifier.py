@@ -651,6 +651,7 @@ def classify(train_data, test_data):
 	#
 	pipeline_voting_classifier_hard = Pipeline([
 	 	('union', FeatureUnion(transformer_list=transformer_all)),
+	 	#('select_features',SelectKBest(k=10000)),
 	 	('clf', VotingClassifier(estimators=[
 	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
@@ -702,7 +703,7 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
-	evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
+	predictions = evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
 	# evaluate(train_data, pipeline_voting_classifier_meta, 'Voting meta')
 
 
@@ -713,13 +714,13 @@ def classify(train_data, test_data):
 	#test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
-	# pipeline = pipeline_Multinomial
+	pipeline = pipeline_voting_classifier_hard
 	# train_y = train_data['Label'].values.astype(str)
 	# train_text = train_data
 	#
 	# test_text = test_data
 	#
-	# pipeline.fit(train_data,train_y)
+	# pipeline.fit(train_data_transformed,t)
 	# predictions = pipeline.predict(test_text)
 	# print(predictions)
 	#
@@ -727,14 +728,14 @@ def classify(train_data, test_data):
 	# 	print(predictions[i], test_text['Text'].iloc[i])
 
 
-	# return predictions
+	return predictions
 
 def evaluate(train_data, pipeline, name: str):
 
 	print(name+ ':')
 
 	sum = 0.0
-	n_splits = 7
+	n_splits = 2
 	k_fold = KFold(n_splits=n_splits)
 	for train_indices, test_indices in k_fold.split(train_data):
 		train_text = train_data.iloc[train_indices]
@@ -752,6 +753,8 @@ def evaluate(train_data, pipeline, name: str):
 		print('\t'+str(accuracy))
 		sum += accuracy
 	print('Average:', sum/n_splits)
+
+	return prediction 
 
 
 def visualize(train_data):
@@ -855,7 +858,8 @@ def main():
 
 	# Classify
 	predictions = classify(train_data_transformed, test_data_transformed)
-	# write_scores(resultfile, predictions)
+
+	write_scores(resultfile, predictions)
 
 	# Perform grid search for a given transformer
 	# grid_search(
