@@ -558,10 +558,10 @@ def classify(train_data: pd.DataFrame, test_data: pd.DataFrame, resultfile: str)
 	transformer = [
 	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
 	create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
-	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
-	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')	]
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')	]
 
 	pipeline_voting_classifier = Pipeline([
 		('union', FeatureUnion(transformer_list=transformer)),
