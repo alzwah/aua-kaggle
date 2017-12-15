@@ -12,8 +12,8 @@ import codecs
 from importlib import reload
 
 # Visualization
-#import seaborn as sns
-#import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Basic scikit features
 from sklearn.base import TransformerMixin, BaseEstimator
@@ -30,7 +30,7 @@ from sklearn.preprocessing import StandardScaler, MaxAbsScaler
 # Classifiers without meta estimators:
 from sklearn.cluster import KMeans
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
-from sklearn.neighbors import NearestCentroid # Mostly because it sounds really cool and seems useful in general
+from sklearn.neighbors import NearestCentroid
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -115,13 +115,13 @@ def get_term_freq_per_cat(dict, cat, token):
 
 
 
-#############################CALGARY###############################
+#############################calgari###############################
 
 
-def calgary(data_in: pd.DataFrame) -> list:
+def calgari(data_in: pd.DataFrame) -> list:
 	'''
 	:param data_in: pandas dataframe containing training data
-	:return: The 200 best calgary tokens
+	:return: The 200 best calgari tokens
 	'''
 
 	# contains tuples of the form (category, sentence)
@@ -153,7 +153,7 @@ def calgary(data_in: pd.DataFrame) -> list:
 			term_count += 1
 			term_count_per_category[cat] += 1
 
-	# structure: [(calgary value, tok)]
+	# structure: [(calgari value, tok)]
 	output = []
 
 	print(term_count_per_category)
@@ -171,15 +171,15 @@ def calgary(data_in: pd.DataFrame) -> list:
 			output.append((oberer_bruch / unterer_bruch, tok))
 
 	sorted_output = sorted(output, reverse=True)
-	# returns 50 best calgary tokens
+	# returns 50 best calgari tokens
 	return [tok for val, tok in sorted_output[:199]]
 
 
-def calgary_ngram(data_in: pd.DataFrame, ngram: int) -> list:
+def calgari_ngram(data_in: pd.DataFrame, ngram: int) -> list:
 	'''
 	:param data_in: pandas dataframe containing training data
 	:param ngram: length of n-gram
-	:return: The 200 best calgary tokens
+	:return: The 200 best calgari tokens
 	'''
 	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
@@ -215,7 +215,7 @@ def calgary_ngram(data_in: pd.DataFrame, ngram: int) -> list:
 			term_count += 1
 			term_count_per_category[cat] += 1
 
-	# structure: [(calgary value, tok)]
+	# structure: [(calgari value, tok)]
 	output = []
 
 	print(term_count_per_category)
@@ -237,7 +237,7 @@ def calgary_ngram(data_in: pd.DataFrame, ngram: int) -> list:
 	return [tok for val, tok in sorted_output[:199]]
 
 
-def map_calgary(sentence: str, calgari_list: list) -> str:
+def map_calgari(sentence: str, calgari_list: list) -> str:
 	'''
 	:param sentence: Sentence to be searched.
 	:param calgari_list: List of calgari-tokens that should be matched
@@ -251,7 +251,7 @@ def map_calgary(sentence: str, calgari_list: list) -> str:
 	return (" ").join(output)
 
 
-def map_calgary_words(sentence: str, calgari_list) -> str:
+def map_calgari_words(sentence: str, calgari_list) -> str:
 	'''
 	:param sentence: Sentence to be searched.
 	:param calgari_list: List of calgari-tokens that should be matched
@@ -432,11 +432,15 @@ def unique_missing_tokens(data_in: pd.DataFrame) -> list:
 #############################PROCESSING###############################
 
 
-def grid_search(transformer, param_grid, train_data, estimator):
-	"""
+def grid_search(transformer: list , param_grid: dict, train_data: pd.Dataframe, estimator: Pipeline):
+	'''
 	Fine tune the parameters param_grid with regards to the model in pipeline.
 	Displays the possible parameters that can be used in param_grid when executed.
-	"""
+	:param transformer: list with the FeatureUnion transformer to be used
+	:param param_grid: dictionary with the path to the parameter as key and the values to be tried
+	:param train_data: the train data as pandas dataframe
+	:param estimator: the pipeline to be used 
+	'''
 	# Example for parameters: { 'solver': ['adam', 'lbfgs'], 'activation': ['logistic', 'relu'] }
 	train_x = train_data.copy()
 	train_x.drop('Label', axis=1)
@@ -465,8 +469,16 @@ def grid_search(transformer, param_grid, train_data, estimator):
 		print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 
-# function that creates subpipelines for transformer
-def create_subpipeline(name,vectorizer,subpipeline_name,columname):
+
+def create_subpipeline(name: str,vectorizer, subpipeline_name: str,columname: str) -> tuple:
+	'''
+	function that creates subpipelines for transformer for a given column in the dataframe
+	:param name: name for the vectorizer to be labelled i.e. 'tfidf'
+	:param vectorizer: The vectorizer to be used for the column given
+	:param subpipeline_name: the name of the subpipeline
+	:param columname: the column to be selected from the data 
+	:return: a tuple containing the subpipeline for a column
+	'''
 	return (subpipeline_name,Pipeline([
 		('selector',DataFrameColumnExtracter(columname)),
 		(name,vectorizer)]))
@@ -474,13 +486,14 @@ def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 
 # function to append new columns with features to the pandas dataframe
 def append_feature_columns(train_data_transformed, test_data_transformed, function, columname, function_argument):
+
 	# uncomment when using with all data
 	train_data_transformed = train_data_transformed.rename(columns={' Text':'Text'})
 	test_data_transformed = test_data_transformed.rename(columns = {' Text':'Text'})
 	train_map = train_data_transformed.copy()
-	if function == map_calgary:
+	if function == map_calgari:
 		train_map['Text'] = train_map['Text'].apply(function, calgari_list=function_argument)
-	elif function == map_calgary_words:
+	elif function == map_calgari_words:
 		train_map['Text'] = train_map['Text'].apply(function, calgari_list=function_argument)
 	elif function == apply_unique_tokens:
 		train_map['Text'] = train_map['Text'].apply(function, word_list=function_argument)
@@ -495,9 +508,9 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 
 	test_map = test_data_transformed.copy()
 	# in order to apply functions with no arguments
-	if function == map_calgary:
+	if function == map_calgari:
 		test_map['Text'] = test_map['Text'].apply(function, calgari_list=function_argument)
-	elif function == map_calgary_words:
+	elif function == map_calgari_words:
 		test_map['Text'] = test_map['Text'].apply(function, calgari_list=function_argument)
 	elif function == apply_unique_tokens:
 		test_map['Text'] = test_map['Text'].apply(function, word_list=function_argument)
@@ -522,15 +535,15 @@ def classify(train_data: pd.DataFrame, test_data: pd.DataFrame,resultfile: str):
     '''
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer_all = [
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BE', 'unique_BE'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_LU', 'unique_LU'),
@@ -542,19 +555,19 @@ def classify(train_data: pd.DataFrame, test_data: pd.DataFrame,resultfile: str):
 	]
 
 	transformer_calgari = [ # To test changes to transformer
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words','Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars','Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
 	]
 
 	transformer_unique = [ # To test changes to transformer
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words','Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars','Text'),
@@ -574,21 +587,21 @@ def classify(train_data: pd.DataFrame, test_data: pd.DataFrame,resultfile: str):
 	]
 
 	transformer_mlp = [
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
 	]
 	
 	transformer_dial_big = [
 		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals_2', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
@@ -706,17 +719,17 @@ def visualize(train_data):
 
 
 	# # Plots for calgari
-	calgari_labels = ['calgarybimatches', 'calgarytrimatches', 'calgaryfourmatches', 'calgaryfivematches']
+	calgari_labels = ['calgaribimatches', 'calgaritrimatches', 'calgarifourmatches', 'calgarifivematches']
 	plt.figure(figsize=(100,10))
 	for label in calgari_labels:
-		# gather data for calgary n grams
-		visualize_calgary_n_grams = pd.DataFrame()
+		# gather data for calgari n grams
+		visualize_calgari_n_grams = pd.DataFrame()
 		for index, row in train_data.iterrows():
 			for n_gram in row[label].strip().split(' '):
-				visualize_calgary_n_grams = visualize_calgary_n_grams.append(
+				visualize_calgari_n_grams = visualize_calgari_n_grams.append(
 					{label: n_gram, 'Label': row['Label']}, ignore_index=True)
 		# create and save plot
-		sns.countplot(x=label, hue='Label', data=visualize_calgary_n_grams)
+		sns.countplot(x=label, hue='Label', data=visualize_calgari_n_grams)
 		plt.savefig('plots/'+label+'_plot.pdf')
 		print('\tAdded '+label+'_plot.pdf')
 	print('Done adding plots.')
@@ -736,7 +749,7 @@ def main():
 	train_data = read_csv(trainfile)  # train_data should not be changed, so it will only contain the original text
 	test_data = read_csv(testfile)  # test_data should not be changed, so it will only contain the original text
 
-	calgary_tokens = calgary(train_data)
+	calgari_tokens = calgari(train_data)
 
 	# The following data frames contain the features to be trained on:
 	train_data_transformed = read_csv(trainfile)
@@ -744,19 +757,19 @@ def main():
 
 	# # create a list of lists with tokens to be evaluated
 	token_lists = [
-		(calgary(train_data), 'calgarymatches'),
-		(calgary_ngram(train_data,2),'calgarybimatches'),
-		(calgary_ngram(train_data,3),'calgarytrimatches'),
-		(calgary_ngram(train_data,4),'calgaryfourmatches'),
-		(calgary_ngram(train_data,5),'calgaryfivematches')
+		(calgari(train_data), 'calgarimatches'),
+		(calgari_ngram(train_data, 2), 'calgaribimatches'),
+		(calgari_ngram(train_data, 3), 'calgaritrimatches'),
+		(calgari_ngram(train_data, 4), 'calgarifourmatches'),
+		(calgari_ngram(train_data, 5), 'calgarifivematches')
 	]
 
 	print('...adding features')
 
 	for (token_list, columname) in token_lists:
-		train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgary, columname, token_list)
+		train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgari, columname, token_list)
 
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgary_words, 'calgarymatches_exact_match', calgary_tokens)
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgari_words, 'calgarimatches_exact_match', calgari_tokens)
 
 	unique_token_list = unique_tokens(train_data)
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_BE', unique_token_list['BE'])
@@ -792,14 +805,14 @@ def main():
 	# Perform grid search for a given transformer
 	# grid_search(
 	# 	transformer = [
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 	# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
 	# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
 	# 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
+	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
 	# 	],
 	# 	train_data=train_data_transformed,
 	# 	param_grid={
