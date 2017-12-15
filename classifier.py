@@ -12,8 +12,8 @@ import codecs
 from importlib import reload
 
 # Visualization
-#import seaborn as sns
-#import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Basic scikit features
 from sklearn.base import TransformerMixin, BaseEstimator
@@ -30,7 +30,7 @@ from sklearn.preprocessing import StandardScaler, MaxAbsScaler
 # Classifiers without meta estimators:
 from sklearn.cluster import KMeans
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
-from sklearn.neighbors import NearestCentroid # Mostly because it sounds really cool and seems useful in general
+from sklearn.neighbors import NearestCentroid
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
