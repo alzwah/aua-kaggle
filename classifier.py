@@ -431,11 +431,15 @@ def unique_missing_tokens(data_in):
 #############################PROCESSING###############################
 
 
-def grid_search(transformer, param_grid, train_data, estimator):
-	"""
+def grid_search(transformer: list , param_grid: dict, train_data: pd.Dataframe, estimator: Pipeline):
+	'''
 	Fine tune the parameters param_grid with regards to the model in pipeline.
 	Displays the possible parameters that can be used in param_grid when executed.
-	"""
+	:param transformer: list with the FeatureUnion transformer to be used
+	:param param_grid: dictionary with the path to the parameter as key and the values to be tried
+	:param train_data: the train data as pandas dataframe
+	:param estimator: the pipeline to be used 
+	'''
 	# Example for parameters: { 'solver': ['adam', 'lbfgs'], 'activation': ['logistic', 'relu'] }
 	train_x = train_data.copy()
 	train_x.drop('Label', axis=1)
@@ -464,8 +468,16 @@ def grid_search(transformer, param_grid, train_data, estimator):
 		print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 
-# function that creates subpipelines for transformer
-def create_subpipeline(name,vectorizer,subpipeline_name,columname):
+
+def create_subpipeline(name: str,vectorizer, subpipeline_name: str,columname: str) -> tuple:
+	'''
+	function that creates subpipelines for transformer for a given column in the dataframe
+	:param name: name for the vectorizer to be labelled i.e. 'tfidf'
+	:param vectorizer: The vectorizer to be used for the column given
+	:param subpipeline_name: the name of the subpipeline
+	:param columname: the column to be selected from the data 
+	:return: a tuple containing the subpipeline for a column
+	'''
 	return (subpipeline_name,Pipeline([
 		('selector',DataFrameColumnExtracter(columname)),
 		(name,vectorizer)]))
@@ -473,6 +485,7 @@ def create_subpipeline(name,vectorizer,subpipeline_name,columname):
 
 # function to append new columns with features to the pandas dataframe
 def append_feature_columns(train_data_transformed, test_data_transformed, function, columname, function_argument):
+
 	# uncomment when using with all data
 	train_data_transformed = train_data_transformed.rename(columns={' Text':'Text'})
 	test_data_transformed = test_data_transformed.rename(columns = {' Text':'Text'})
