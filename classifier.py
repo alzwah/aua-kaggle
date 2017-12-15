@@ -85,13 +85,13 @@ def write_scores(filename, predictions):
 		csv_writer = csv.writer(resultof, delimiter=",", lineterminator='\n')
 		csv_writer.writerow(['Id', 'Prediction'])
 		for id_, pred in predictions:
-			csv_writer.writerow([id_, pred.strip()])	
-		
-		
-		
-		
-		
-		
+			csv_writer.writerow([id_, pred.strip()])
+
+
+
+
+
+
 #############################HELPER METHODS###############################
 
 
@@ -159,7 +159,7 @@ def calgari(data_in: pd.DataFrame) -> list:
 	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
-		
+
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
 			oberer_bruch = max(
 				(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
@@ -221,7 +221,7 @@ def calgari_ngram(data_in: pd.DataFrame, ngram: int) -> list:
 	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
-			
+
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
 			oberer_bruch = max(
 				(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
@@ -262,8 +262,8 @@ def map_calgari_words(sentence: str, calgari_list) -> str:
 		if re.search('(\W'+tok+'\W|^'+tok+'\W|\W'+tok+'$)', sentence):
 			output.append(tok)
 	return (" ").join(output)
-	
-	
+
+
 #############################BIGRAMS###############################
 
 
@@ -341,8 +341,8 @@ def apply_bigram_frequency(sentence: str, bigram_list: list) -> float:
 	result = out_of_place/len(sentence)
 
 	return str(result)
-	
-	
+
+
 def get_list_of_double_vocals() -> list:
 	'''
 	:return: list of all possible combinations of two vocals.
@@ -370,7 +370,7 @@ def unique_tokens(data_in: pd.DataFrame):
 	for elem in category_text:
 		tokens = elem[1].split(" ")
 		category_tokens[elem[0]].extend(tokens)
-	
+
 	BE = set(category_tokens['BE'])
 	BS = set(category_tokens['BS'])
 	LU = set(category_tokens['LU'])
@@ -408,12 +408,12 @@ def unique_missing_tokens(data_in):
 	for elem in category_text:
 		tokens = elem[1].split(" ")
 		category_tokens[elem[0]].extend(tokens)
-		
+
 	BE = set(category_tokens['BE'])
 	BS = set(category_tokens['BS'])
 	LU = set(category_tokens['LU'])
 	ZH = set(category_tokens['ZH'])
-	
+
 	missing_tokens = []
 	print((BE)-(BS & LU & ZH))
 	missing_tokens.extend(list((BE)-(BS & LU & ZH)))
@@ -423,9 +423,9 @@ def unique_missing_tokens(data_in):
 	missing_tokens.extend(list((LU) - (BE & BS & ZH)))
 	print((ZH)-(BS & LU & BE))
 	missing_tokens.extend(list((ZH) - (BE & BS & LU)))
-	
+
 	return missing_tokens
-	
+
 
 
 #############################PROCESSING###############################
@@ -438,7 +438,7 @@ def grid_search(transformer: list , param_grid: dict, train_data: pd.Dataframe, 
 	:param transformer: list with the FeatureUnion transformer to be used
 	:param param_grid: dictionary with the path to the parameter as key and the values to be tried
 	:param train_data: the train data as pandas dataframe
-	:param estimator: the pipeline to be used 
+	:param estimator: the pipeline to be used
 	'''
 	# Example for parameters: { 'solver': ['adam', 'lbfgs'], 'activation': ['logistic', 'relu'] }
 	train_x = train_data.copy()
@@ -475,7 +475,7 @@ def create_subpipeline(name: str,vectorizer, subpipeline_name: str,columname: st
 	:param name: name for the vectorizer to be labelled i.e. 'tfidf'
 	:param vectorizer: The vectorizer to be used for the column given
 	:param subpipeline_name: the name of the subpipeline
-	:param columname: the column to be selected from the data 
+	:param columname: the column to be selected from the data
 	:return: a tuple containing the subpipeline for a column
 	'''
 	return (subpipeline_name,Pipeline([
@@ -483,9 +483,16 @@ def create_subpipeline(name: str,vectorizer, subpipeline_name: str,columname: st
 		(name,vectorizer)]))
 
 
-# function to append new columns with features to the pandas dataframe
-def append_feature_columns(train_data_transformed, test_data_transformed, function, columname, function_argument):
-
+def append_feature_columns(train_data_transformed: pd.DataFrame, test_data_transformed: pd.DataFrame, function: function, columname: str, function_argument: object) -> tuple:
+	'''
+		Append new columns with features to the pandas dataframe
+	:param train_data_transformed: Train data containing all created features
+	:param test_data_transformed: Test data containing all created features
+	:param function: The function to be applied to values of the column
+	:param columname: Name of the column to be appended
+	:param function_argument: Pass arguments to the functions map_calgari, map_calgari_words, apply_unique_tokens and apply_bigram_frequency.
+	:return: Updated versions of train_data_transformed and test_data_transformed with the new feature column.
+	'''
 	# uncomment when using with all data
 	train_data_transformed = train_data_transformed.rename(columns={' Text':'Text'})
 	test_data_transformed = test_data_transformed.rename(columns = {' Text':'Text'})
@@ -588,7 +595,7 @@ def classify(train_data, test_data,resultfile):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
 	]
-	
+
 	transformer_dial_big = [
 		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
@@ -699,7 +706,7 @@ def classify(train_data, test_data,resultfile):
 	# 		base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
 	# 	))
 	# ])
-	
+
 	pipeline_voting_classifier_hard = Pipeline([
 	 	('union', FeatureUnion(transformer_list=transformer_all)),
 	 	#('select_features',SelectKBest(k=10000)),
@@ -744,7 +751,7 @@ def classify(train_data, test_data,resultfile):
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 	# evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
-	
+
 
 
 	# train_text = train_data['Text'].values
@@ -757,7 +764,7 @@ def classify(train_data, test_data,resultfile):
 	pipeline = pipeline_voting_classifier_hard
 	train_y = train_data['Label'].values.astype(str)
 	train_text = train_data
-	
+
 	test_text = test_data
 	print('...fitting')
 	pipeline.fit(train_data,train_y)
@@ -772,8 +779,11 @@ def classify(train_data, test_data,resultfile):
 	return predictions
 
 # function to evaluate only on train set
-def evaluate(train_data, pipeline, name: str):
-
+def evaluate(train_data: pd.DataFrame, pipeline: pd.DataFrame, name: str):
+	'''
+		Executes 7-fold cross validation on pipeline with train_data.
+		Prints accuracy for each run and the overall accuracy to the console.
+	'''
 	print(name+ ':')
 
 	sum = 0.0
@@ -794,15 +804,19 @@ def evaluate(train_data, pipeline, name: str):
 		accuracy = accuracy_score(test_y, prediction)
 		print('\t'+str(accuracy))
 		sum += accuracy
-		
+
 	print('Average:', sum/n_splits)
 
 
 
-	return prediction 
+	return prediction
 
-# function to plot data to get a better idea of the features
-def visualize(train_data):
+
+def visualize(train_data: pd.DataFrame):
+	'''
+		Creates plots for some of the train data.
+	:param train_data: DataFrame containing all added features.
+	'''
 	print('... Adding plots.')
 
 	sns.set(style="whitegrid", palette="muted")
@@ -813,19 +827,7 @@ def visualize(train_data):
 	plt.savefig('plots/averagewordlength_plot.pdf')
 	print('\tAdded averagewordlength_plot.pdf')
 
-	# try:
-	# 	sns.pairplot(
-	# 		data=train_data,
-	# 		x_vars=['bigram_frequency_BE','bigram_frequency_BS','bigram_frequency_LU','bigram_frequency_ZH'],
-	# 		y_vars=['Label'],
-	# 	)
-	# 	plt.savefig('plots/bigram_frequency_plot.pdf')
-	# 	print('\tAdded bigram_frequency_plot.pdf')
-	# except ValueError:
-	# 	pass
-
-
-	# # Plots for calgari
+	# Plots for calgari
 	calgari_labels = ['calgaribimatches', 'calgaritrimatches', 'calgarifourmatches', 'calgarifivematches']
 	plt.figure(figsize=(100,10))
 	for label in calgari_labels:
@@ -839,11 +841,14 @@ def visualize(train_data):
 		sns.countplot(x=label, hue='Label', data=visualize_calgari_n_grams)
 		plt.savefig('plots/'+label+'_plot.pdf')
 		print('\tAdded '+label+'_plot.pdf')
+
 	print('Done adding plots.')
 
 
-def print_features(train_data, test_data):
-	# print some of the topmost data to show created features and their values
+def print_features(train_data: pd.DataFrame, test_data: pd.DataFrame):
+	'''
+		Print some of the topmost data to show created features and their values
+	'''
 	print('Train data:')
 	print(train_data.head(30))
 
