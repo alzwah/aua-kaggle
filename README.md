@@ -8,7 +8,7 @@ python classifier.py train.csv test.csv result.csv
 
 train.csv:    Comma-separated CSV file with the columns "Text,Label"
 test.csv:     Comma-separated CSV file with the columns "Id,Text"
-results.csv:  Writes out comma-separated CSV file with the columns "Id,Prediction"
+result.csv:  Writes out comma-separated CSV file with the columns "Id,Prediction"
 ```
 
 
