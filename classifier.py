@@ -118,9 +118,12 @@ def get_term_freq_per_cat(dict, cat, token):
 #############################CALGARY###############################
 
 
-# takes panda dataframe
-# gets training data, returns n-best calgary tokens
-def calgary(data_in):
+def calgary(data_in: pd.DataFrame) -> list:
+	'''
+	:param data_in: pandas dataframe containing training data
+	:return: The 200 best calgary tokens
+	'''
+
 	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
 	# tokenize sentences
@@ -169,11 +172,15 @@ def calgary(data_in):
 
 	sorted_output = sorted(output, reverse=True)
 	# returns 50 best calgary tokens
-	return ([tok for val, tok in sorted_output[:199]])
+	return [tok for val, tok in sorted_output[:199]]
 
-# takes panda dataframe
-# gets training data, returns n-best calgary tokens
-def calgary_ngram(data_in, ngram):
+
+def calgary_ngram(data_in: pd.DataFrame, ngram: int) -> list:
+	'''
+	:param data_in: pandas dataframe containing training data
+	:param ngram: length of n-gram
+	:return: The 200 best calgary tokens
+	'''
 	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
 	# split up sentences in n-grams (including whitespace)
@@ -227,22 +234,31 @@ def calgary_ngram(data_in, ngram):
 
 	sorted_output = sorted(output, reverse=True)
 	# returns 25 most significant n-grams
-	return ([tok for val, tok in sorted_output[:199]])
+	return [tok for val, tok in sorted_output[:199]]
 
 
-# takes sentence and calgary-list and returns all the substrings that match character sequences from the list
-def map_calgary(sentence, c_list):
+def map_calgary(sentence: str, calgari_list: list) -> str:
+	'''
+	:param sentence: Sentence to be searched.
+	:param calgari_list: List of calgari-tokens that should be matched
+	:return: all the substrings that match elements from the calgari_list
+	'''
 	output = []
-	for tok in c_list:
+	for tok in calgari_list:
 		if re.search(tok, sentence):
 			output.append(tok)
 
 	return (" ").join(output)
 
-# takes sentence and calgary-list and returns all the words that match words from the list
-def map_calgary_words(sentence, c_list):
+
+def map_calgary_words(sentence: str, calgari_list) -> str:
+	'''
+	:param sentence: Sentence to be searched.
+	:param calgari_list: List of calgari-tokens that should be matched
+	:return: all the words that match elements from the calgari_list
+	'''
 	output = []
-	for tok in c_list:
+	for tok in calgari_list:
 		if re.search('(\W'+tok+'\W|^'+tok+'\W|\W'+tok+'$)', sentence):
 			output.append(tok)
 	return (" ").join(output)
@@ -251,8 +267,13 @@ def map_calgary_words(sentence, c_list):
 #############################BIGRAMS###############################
 
 
+def list_of_bigrams(data_in: pd.DataFrame):
+	'''
+		Generate a list of all bigrams with their frequencies.
+	:param data_in: Dataframe containing the text and its label
+	:return: Dictionary containing each Dialect as key, and a list of bigrams, sorted by their frequency in that dialect.
+	'''
 
-def list_of_bigrams(data_in):
 	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
 
@@ -275,7 +296,11 @@ def list_of_bigrams(data_in):
 	return category_lists
 
 
-def get_bigram_frequency_list(sentence):
+def get_bigram_frequency_list(sentence: str) -> str:
+	'''
+	:param sentence: The sentence to be searched through.
+	:return: List of bigrams sorted by how frequent they are in the sentence.
+	'''
 	bigram_dict = {}
 	for bigram in zip(*[sentence[i:] for i in range(2)]):
 		key = bigram[0] + bigram[1]
@@ -287,8 +312,13 @@ def get_bigram_frequency_list(sentence):
 	return bigram_list
 
 
-# calculate error in n-gram lists inspired by Canvar & Trenkle 1994, N-Gram-Based Text Categorization
-def apply_bigram_frequency(sentence, bigram_list):
+def apply_bigram_frequency(sentence: str, bigram_list: list) -> float:
+	'''
+		Calculate error for bigrams in a sentence compared to a lists of bigrams inspired by Canvar & Trenkle 1994, N-Gram-Based Text Categorization
+	:param sentence: The sentence to be searched.
+	:param bigram_list: List of bigrams ordered by some frequency.
+	:return: Represents the error.
+	'''
 	sentence_bigrams = get_bigram_frequency_list(sentence)
 	if len(sentence_bigrams) == 0:
 		return "0"
@@ -309,12 +339,14 @@ def apply_bigram_frequency(sentence, bigram_list):
 			out_of_place += max_value
 
 	result = out_of_place/len(sentence)
-	#print(result,(type(result)))
-	
+
 	return str(result)
 	
 	
-def get_list_of_double_vocals():
+def get_list_of_double_vocals() -> list:
+	'''
+	:return: list of all possible combinations of two vocals.
+	'''
 	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
 	double_vocals = []
 	for char1 in single_vocals:
@@ -326,8 +358,11 @@ def get_list_of_double_vocals():
 
 #############################UNIQUE TOKENS PER CATEGORY###############################
 
-# returns a list of tokens that only appear in one category
-def unique_tokens(data_in):
+def unique_tokens(data_in: pd.DataFrame):
+	'''
+	:param data_in: Dataframe containing the text and its label
+	:return: Set of tokens that only appear in one category
+	'''
     # contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
     # build dict {category: [tokens]}
@@ -343,7 +378,13 @@ def unique_tokens(data_in):
 	return {'BE': (BE - BS - LU - ZH), 'BS': (BS - BE - LU - ZH), 'LU': (LU - BE - BS - ZH), 'ZH': (ZH - BE - BS - LU)}
 
 
-def apply_unique_tokens(sentence, word_list):
+def apply_unique_tokens(sentence: str, word_list: list) -> str:
+	'''
+
+	:param sentence:
+	:param word_list:
+	:return:
+	'''
 	output = []
 
 	for word in re.findall('\w+', sentence):
@@ -437,9 +478,9 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 	test_data_transformed = test_data_transformed.rename(columns = {' Text':'Text'})
 	train_map = train_data_transformed.copy()
 	if function == map_calgary:
-		train_map['Text'] = train_map['Text'].apply(function, c_list=function_argument)
+		train_map['Text'] = train_map['Text'].apply(function, calgari_list=function_argument)
 	elif function == map_calgary_words:
-		train_map['Text'] = train_map['Text'].apply(function, c_list=function_argument)
+		train_map['Text'] = train_map['Text'].apply(function, calgari_list=function_argument)
 	elif function == apply_unique_tokens:
 		train_map['Text'] = train_map['Text'].apply(function, word_list=function_argument)
 	elif function == apply_bigram_frequency:
@@ -454,9 +495,9 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 	test_map = test_data_transformed.copy()
 	# in order to apply functions with no arguments
 	if function == map_calgary:
-		test_map['Text'] = test_map['Text'].apply(function, c_list=function_argument)
+		test_map['Text'] = test_map['Text'].apply(function, calgari_list=function_argument)
 	elif function == map_calgary_words:
-		test_map['Text'] = test_map['Text'].apply(function, c_list=function_argument)
+		test_map['Text'] = test_map['Text'].apply(function, calgari_list=function_argument)
 	elif function == apply_unique_tokens:
 		test_map['Text'] = test_map['Text'].apply(function, word_list=function_argument)
 	elif function == apply_bigram_frequency:
