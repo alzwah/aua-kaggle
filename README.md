@@ -4,11 +4,11 @@ This algorithm classifies sentences into the four Swiss dialects BE, BS, LU and 
 
 Program call:
 ```
-python classifier.py train.csv test.csv result.csv
+python classifier.py train.csv test.csv result
 
 train.csv:    Comma-separated CSV file with the columns "Text,Label"
 test.csv:     Comma-separated CSV file with the columns "Id,Text"
-result.csv:  Writes out comma-separated CSV file with the columns "Id,Prediction"
+result:  Writes out comma-separated CSV file with the columns "Id,Prediction"
 ```
 
 
