@@ -58,7 +58,8 @@ trainfile = arguments.trainfile
 testfile = arguments.testfile
 resultfile = arguments.resultfile
 
-#https://stackoverflow.com/questions/34710281/use-featureunion-in-scikit-learn-to-combine-two-pandas-columns-for-tfidf
+
+# https://stackoverflow.com/questions/34710281/use-featureunion-in-scikit-learn-to-combine-two-pandas-columns-for-tfidf
 class DataFrameColumnExtracter(TransformerMixin):
 	def __init__(self, column):
 		self.column = column
@@ -75,7 +76,7 @@ class DataFrameColumnExtracter(TransformerMixin):
 
 
 def read_csv(filename):
-	data = pd.read_csv(filename,encoding='utf-8')
+	data = pd.read_csv(filename, encoding='utf-8')
 	return data
 
 
@@ -86,10 +87,6 @@ def write_scores(filename, predictions):
 		csv_writer.writerow(['Id', 'Prediction'])
 		for id_, pred in predictions:
 			csv_writer.writerow([id_, pred.strip()])
-
-
-
-
 
 
 #############################HELPER METHODS###############################
@@ -105,14 +102,11 @@ def average_word_length(sentence_in):
 	return (sum / count)
 
 
-
-
 def get_term_freq_per_cat(dict, cat, token):
 	if (cat, token) in dict.keys():
 		return dict[(cat, token)]
 	else:
 		return 0
-
 
 
 #############################calgari###############################
@@ -159,7 +153,6 @@ def calgari(data_in: pd.DataFrame) -> list:
 	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
-
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
 			oberer_bruch = max(
 				(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
@@ -221,7 +214,6 @@ def calgari_ngram(data_in: pd.DataFrame, ngram: int) -> list:
 	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
-
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
 			oberer_bruch = max(
 				(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
@@ -259,7 +251,7 @@ def map_calgari_words(sentence: str, calgari_list) -> str:
 	'''
 	output = []
 	for tok in calgari_list:
-		if re.search('(\W'+tok+'\W|^'+tok+'\W|\W'+tok+'$)', sentence):
+		if re.search('(\W' + tok + '\W|^' + tok + '\W|\W' + tok + '$)', sentence):
 			output.append(tok)
 	return (" ").join(output)
 
@@ -283,16 +275,16 @@ def list_of_bigrams(data_in: pd.DataFrame):
 		# count frequencies for all occuring bigrams
 		for bigram in zip(*[list(elem[1][i:]) for i in range(2)]):
 			dict = category_tokens[elem[0]]
-			key = bigram[0]+bigram[1]
+			key = bigram[0] + bigram[1]
 			if key in dict:
-				dict[key] = dict[key]+1
+				dict[key] = dict[key] + 1
 			else:
 				dict[key] = 1
 
 	Labels = ['BE', 'BS', 'LU', 'ZH']
 	category_lists = {'BE': [], 'BS': [], 'LU': [], 'ZH': []}
 	for label in Labels:
-		category_lists[label] = sorted(category_tokens[label].keys(), key= lambda k: category_tokens[label][k])
+		category_lists[label] = sorted(category_tokens[label].keys(), key=lambda k: category_tokens[label][k])
 	return category_lists
 
 
@@ -308,7 +300,7 @@ def get_bigram_frequency_list(sentence: str) -> str:
 			bigram_dict[key] = bigram_dict[key] + 1
 		else:
 			bigram_dict[key] = 1
-	bigram_list = sorted(bigram_dict.keys(), key= lambda k: bigram_dict[k])
+	bigram_list = sorted(bigram_dict.keys(), key=lambda k: bigram_dict[k])
 	return bigram_list
 
 
@@ -332,13 +324,13 @@ def apply_bigram_frequency(sentence: str, bigram_list: list) -> float:
 			if bigram != sentence_bigram:
 				continue
 			else:
-				out_of_place += abs(s_index-bigram_index)
+				out_of_place += abs(s_index - bigram_index)
 				found = True
 				break
 		if not found:
 			out_of_place += max_value
 
-	result = out_of_place/len(sentence)
+	result = out_of_place / len(sentence)
 
 	return str(result)
 
@@ -347,13 +339,12 @@ def get_list_of_double_vocals() -> list:
 	'''
 	:return: list of all possible combinations of two vocals.
 	'''
-	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
+	single_vocals = ['ö', 'ä', 'ü', 'ì', 'ò', 'è', 'a', 'e', 'i', 'o', 'u']
 	double_vocals = []
 	for char1 in single_vocals:
 		for char2 in single_vocals:
-			double_vocals.append(''+char1+char2)
+			double_vocals.append('' + char1 + char2)
 	return double_vocals
-
 
 
 #############################UNIQUE TOKENS PER CATEGORY###############################
@@ -363,9 +354,9 @@ def unique_tokens(data_in: pd.DataFrame):
 	:param data_in: Dataframe containing the text and its label
 	:return: Set of tokens that only appear in one category
 	'''
-    # contains tuples of the form (category, sentence)
+	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
-    # build dict {category: [tokens]}
+	# build dict {category: [tokens]}
 	category_tokens = {'BE': [], 'BS': [], 'LU': [], 'ZH': []}
 	for elem in category_text:
 		tokens = elem[1].split(" ")
@@ -392,18 +383,24 @@ def apply_unique_tokens(sentence: str, word_list: list) -> str:
 			output.append(word)
 	return ' '.join(output)
 
-	# return
-	# for word in word_list:
-	# 	if re.search('\w+', sentence):
-	# 		output.append(word)
-	# return ' '.join(output)
+
+# return
+# for word in word_list:
+# 	if re.search('\w+', sentence):
+# 		output.append(word)
+# return ' '.join(output)
 
 
-#returns a list of tokens that appear in 3/4 of categories (e.g. appear in BS and LU and ZH but NOT BE)
-def unique_missing_tokens(data_in):
-    # contains tuples of the form (category, sentence)
+# returns a list of tokens that appear in 3/4 of categories (e.g. appear in BS and LU and ZH but NOT BE)
+def unique_missing_tokens(data_in: pd.DataFrame) -> list:
+	'''
+	Collects all the tokens that are present in 3 out of 4 categories
+	:param data_in: Dataframe containing the text and its label
+	:return: List of tokens that are only NOT present in one category
+	'''
+	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
-    # build dict {category: [tokens]}
+	# build dict {category: [tokens]}
 	category_tokens = {'BE': [], 'BS': [], 'LU': [], 'ZH': []}
 	for elem in category_text:
 		tokens = elem[1].split(" ")
@@ -415,23 +412,18 @@ def unique_missing_tokens(data_in):
 	ZH = set(category_tokens['ZH'])
 
 	missing_tokens = []
-	print((BE)-(BS & LU & ZH))
-	missing_tokens.extend(list((BE)-(BS & LU & ZH)))
-	print((BS)-(BE & LU & ZH))
-	missing_tokens.extend(list((BS) -(BE & LU & ZH)))
-	print((LU)-(BS & BE & ZH))
+	missing_tokens.extend(list((BE) - (BS & LU & ZH)))
+	missing_tokens.extend(list((BS) - (BE & LU & ZH)))
 	missing_tokens.extend(list((LU) - (BE & BS & ZH)))
-	print((ZH)-(BS & LU & BE))
 	missing_tokens.extend(list((ZH) - (BE & BS & LU)))
 
 	return missing_tokens
 
 
-
 #############################PROCESSING###############################
 
 
-def grid_search(transformer: list , param_grid: dict, train_data: pd.Dataframe, estimator: Pipeline):
+def grid_search(transformer: list, param_grid: dict, train_data: pd.DataFrame, estimator: Pipeline):
 	'''
 	Fine tune the parameters param_grid with regards to the model in pipeline.
 	Displays the possible parameters that can be used in param_grid when executed.
@@ -468,8 +460,7 @@ def grid_search(transformer: list , param_grid: dict, train_data: pd.Dataframe, 
 		print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 
-
-def create_subpipeline(name: str,vectorizer, subpipeline_name: str,columname: str) -> tuple:
+def create_subpipeline(name: str, vectorizer, subpipeline_name: str, columname: str) -> tuple:
 	'''
 	function that creates subpipelines for transformer for a given column in the dataframe
 	:param name: name for the vectorizer to be labelled i.e. 'tfidf'
@@ -478,12 +469,12 @@ def create_subpipeline(name: str,vectorizer, subpipeline_name: str,columname: st
 	:param columname: the column to be selected from the data
 	:return: a tuple containing the subpipeline for a column
 	'''
-	return (subpipeline_name,Pipeline([
-		('selector',DataFrameColumnExtracter(columname)),
-		(name,vectorizer)]))
+	return (subpipeline_name, Pipeline([
+		('selector', DataFrameColumnExtracter(columname)),
+		(name, vectorizer)]))
 
 
-def append_feature_columns(train_data_transformed: pd.DataFrame, test_data_transformed: pd.DataFrame, function: function, columname: str, function_argument: object) -> tuple:
+def append_feature_columns(train_data_transformed: pd.DataFrame, test_data_transformed: pd.DataFrame, function, columname: str, function_argument: object) -> tuple:
 	'''
 		Append new columns with features to the pandas dataframe
 	:param train_data_transformed: Train data containing all created features
@@ -494,8 +485,8 @@ def append_feature_columns(train_data_transformed: pd.DataFrame, test_data_trans
 	:return: Updated versions of train_data_transformed and test_data_transformed with the new feature column.
 	'''
 	# uncomment when using with all data
-	train_data_transformed = train_data_transformed.rename(columns={' Text':'Text'})
-	test_data_transformed = test_data_transformed.rename(columns = {' Text':'Text'})
+	train_data_transformed = train_data_transformed.rename(columns={' Text': 'Text'})
+	test_data_transformed = test_data_transformed.rename(columns={' Text': 'Text'})
 	train_map = train_data_transformed.copy()
 	if function == map_calgari:
 		train_map['Text'] = train_map['Text'].apply(function, calgari_list=function_argument)
@@ -531,13 +522,23 @@ def append_feature_columns(train_data_transformed: pd.DataFrame, test_data_trans
 	return train_data_transformed, test_data_transformed
 
 
-def classify(train_data, test_data,resultfile):
+def classify(train_data: pd.DataFrame, test_data: pd.DataFrame, resultfile: str):
+	'''
+    Classifies with feature pipelines and returns predictions
+    :param train_data: Training dataframe containing the text and its label 
+    :param test_data: Test dataframe containing the text and its label 
+    :param resultfile: string pointing to the CSV file where the results will be written
+    :return: list of predictions
+    '''
+
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer_all = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
@@ -547,17 +548,19 @@ def classify(train_data, test_data,resultfile):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_LU', 'unique_LU'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH'),
-		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
-		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
-		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
-		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
+		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
 
-	transformer_calgari = [ # To test changes to transformer
+	transformer_calgari = [  # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words','Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars','Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
@@ -565,11 +568,13 @@ def classify(train_data, test_data,resultfile):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
 	]
 
-	transformer_unique = [ # To test changes to transformer
+	transformer_unique = [  # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words','Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars','Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BE', 'unique_BE'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
@@ -578,18 +583,27 @@ def classify(train_data, test_data,resultfile):
 	]
 
 	transformer_n_grams = [
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
-		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='word'), 'subpipeline_word_n_grams', 'Text'),
-		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,5), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
-		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
+		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2, 2), analyzer='word'), 'subpipeline_word_n_grams',
+						   'Text'),
+		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2, 5), analyzer='char'), 'subpipeline_char_n_grams',
+						   'Text'),
+		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)),
+						   'subpipeline_countvocals', 'Text'),
 	]
 
 	transformer_mlp = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
-		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
+						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
+						   'Text'),
+		create_subpipeline('count_vec',
+						   TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'),
+						   'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
@@ -597,9 +611,13 @@ def classify(train_data, test_data,resultfile):
 	]
 
 	transformer_dial_big = [
-		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
-		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals_2', 'Text'),
+		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2, 2), analyzer='char'), 'subpipeline_char_n_grams',
+						   'Text'),
+		create_subpipeline('count_vec',
+						   TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'),
+						   'subpipeline_countvocals', 'Text'),
+		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)),
+						   'subpipeline_countvocals_2', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
@@ -607,176 +625,72 @@ def classify(train_data, test_data,resultfile):
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
 
-	# Preparing potential pipelines
-	# pipeline_Multinomial = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
-	# ])
-	#
-	# pipeline_KNeighbors = Pipeline([
-	# 		('union', FeatureUnion(transformer_list = transformer_all)),
-	# 		('clf', KNeighborsClassifier(n_neighbors = 15))
-	# 		])
-	#
-	# pipeline_MLP = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
-	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
-	# ])
-	#
-	# pipeline_MLP2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
-	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300, alpha=9.9999999999999995e-07))
-	# ])
-	#
-	# pipeline_ridge = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', RidgeClassifier())
-	# ])
-	#
-	# pipeline_ridge_cv = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', RidgeClassifierCV())
-	# ])
-	# pipeline_nearest_centroid = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', NearestCentroid())
-	# ])
-	# pipeline_bernoulliNB = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', BernoulliNB())
-	# ])
-	#
-	# pipeline_one_v_one = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
-	# ])
-	# pipeline_one_v_rest = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
-	# ])
-	#
-	# pipeline_decision_tree = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', DecisionTreeClassifier(max_features=0.8))
-	# ])
-	#
-	# pipeline_svc = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', SVC())
-	# ])
-	# pipeline_linear_svc = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', LinearSVC())
-	# ])
-	#
-	# pipeline_logistic_regression = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', LogisticRegression())
-	# ])
-	# pipeline_sgd_classifier = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
-	# 	('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
-	# ])
-	#
-	# pipeline_passive_agressive = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
-	# 	('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
-	# ])
-	#
-	# pipeline_voting_classifier = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', VotingClassifier(estimators=[
-	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-	# 		], voting='soft', weights=[1.5, 1], n_jobs=-1)
-	# 	)
-	# ])
-	# pipeline_voting_classifier2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', VotingClassifier(estimators=[
-	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300,  alpha=9.9999999999999995e-07)),
-	# 		], voting='soft', weights=[2, 1], n_jobs=-1)
-	# 	)
-	# ])
-	#
-	# pipeline_ada_boost_classifier = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', AdaBoostClassifier(
-	# 		base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
-	# 	))
-	# ])
+	transformer = [
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'),
+		create_subpipeline('count_vec',
+						   TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'),
+						   'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')]
+
+	pipeline_voting_classifier = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', VotingClassifier(estimators=[
+			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+		], voting='soft', weights=[1.5, 1], n_jobs=-1)
+		 )
+	])
 
 	pipeline_voting_classifier_hard = Pipeline([
-	 	('union', FeatureUnion(transformer_list=transformer_all)),
-	 	#('select_features',SelectKBest(k=10000)),
-	 	('clf', VotingClassifier(estimators=[
-	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_4',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_5',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_6',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_7',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_8',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-	 		('Linear SVC', LinearSVC()),
-	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
-	 	], voting='hard', n_jobs=-1)
-	 	 )
-	 ])
-
+		('union', FeatureUnion(transformer_list=transformer_all)),
+		# ('select_features',SelectKBest(k=10000)),
+		('clf', VotingClassifier(estimators=[
+			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_2', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_3', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_4', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_5', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_6', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_7', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MultinomialNB_8', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+			('Linear SVC', LinearSVC()),
+			('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
+		], voting='hard', n_jobs=-1)
+		 )
+	])
 
 	# Evaluate pipelines
-	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	# evaluate(train_data, pipeline_MLP, 'MLP')
-	# evaluate(train_data, pipeline_ridge, 'Ridge')
-	# evaluate(train_data, pipeline_ridge_cv, 'RidgeCV')
-	# evaluate(train_data, pipeline_nearest_centroid, 'NearestCentroid')
-	# evaluate(train_data, pipeline_nearest_centroid_2, 'NearestCentroid')
-	# evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
-	# evaluate(train_data, pipeline_bernoulliNB2, 'BernoulliNB')
-	# evaluate(train_data, pipeline_one_v_one, 'One v. one, chosen estimator MultinomialNB')
-	# evaluate(train_data, pipeline_one_v_rest, 'One v. rest, chosen estimator MultinomialNB')
-	# evaluate(train_data, pipeline_decision_tree, 'Decision tree') # ca. 62%
-	# evaluate(train_data, pipeline_svc, 'SVC') # ca. 26%
-	# evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
-	# evaluate(train_data, pipeline_linear_svc2, 'Linear SVC')
-	# evaluate(train_data, pipeline_logistic_regression, 'Logistic regression')
-	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
-	# evaluate(train_data, pipeline_sgd_classifier2, 'SGD')
-	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
-	# evaluate(train_data, pipeline_passive_agressive2, 'Passive agressive')
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
-	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
-	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 	# evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
 
-
-
-	# train_text = train_data['Text'].values
-	# train_y = train_data['Label'].values
-	#print(test_data)
-	#im test file von der web site hat es einen whitespace vor 'Text'
-	# test_text = test_data['Text'].values
-
-	#UM MIT TESTDATA ZU ARBEITEN:
+	# UM MIT TESTDATA ZU ARBEITEN:
 	pipeline = pipeline_voting_classifier_hard
 	train_y = train_data['Label'].values.astype(str)
 	train_text = train_data
 
 	test_text = test_data
-	print('...fitting')
-	pipeline.fit(train_data,train_y)
-	print('...predicting')
+	print('...fitting 1')
+	pipeline.fit(train_data, train_y)
+	print('...predicting 1')
 	predictions = pipeline.predict(test_text)
-	# print(predictions)
-	#
-	# for i in range(0,len(predictions)):
-	# 	print(predictions[i], test_text['Text'].iloc[i])
-	write_scores(resultfile, predictions)
+
+	write_scores(resultfile + 'hard.csv', predictions)
+
+	# write the result file for the second submission
+	pipeline = pipeline_voting_classifier
+	print('...fitting 2')
+	pipeline.fit(train_data, train_y)
+	print('...predicting 2')
+	predictions = pipeline.predict(test_text)
+
+	write_scores(resultfile + 'soft.csv', predictions)
 
 	return predictions
+
 
 # function to evaluate only on train set
 def evaluate(train_data: pd.DataFrame, pipeline: pd.DataFrame, name: str):
@@ -784,7 +698,7 @@ def evaluate(train_data: pd.DataFrame, pipeline: pd.DataFrame, name: str):
 		Executes 7-fold cross validation on pipeline with train_data.
 		Prints accuracy for each run and the overall accuracy to the console.
 	'''
-	print(name+ ':')
+	print(name + ':')
 
 	sum = 0.0
 	n_splits = 7
@@ -802,12 +716,10 @@ def evaluate(train_data: pd.DataFrame, pipeline: pd.DataFrame, name: str):
 
 		prediction = pipeline.predict(test_text)
 		accuracy = accuracy_score(test_y, prediction)
-		print('\t'+str(accuracy))
+		print('\t' + str(accuracy))
 		sum += accuracy
 
-	print('Average:', sum/n_splits)
-
-
+	print('Average:', sum / n_splits)
 
 	return prediction
 
@@ -829,7 +741,7 @@ def visualize(train_data: pd.DataFrame):
 
 	# Plots for calgari
 	calgari_labels = ['calgaribimatches', 'calgaritrimatches', 'calgarifourmatches', 'calgarifivematches']
-	plt.figure(figsize=(100,10))
+	plt.figure(figsize=(100, 10))
 	for label in calgari_labels:
 		# gather data for calgari n grams
 		visualize_calgari_n_grams = pd.DataFrame()
@@ -839,8 +751,8 @@ def visualize(train_data: pd.DataFrame):
 					{label: n_gram, 'Label': row['Label']}, ignore_index=True)
 		# create and save plot
 		sns.countplot(x=label, hue='Label', data=visualize_calgari_n_grams)
-		plt.savefig('plots/'+label+'_plot.pdf')
-		print('\tAdded '+label+'_plot.pdf')
+		plt.savefig('plots/' + label + '_plot.pdf')
+		print('\tAdded ' + label + '_plot.pdf')
 
 	print('Done adding plots.')
 
@@ -879,17 +791,31 @@ def main():
 	print('...adding features')
 
 	for (token_list, columname) in token_lists:
-		train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgari, columname, token_list)
+		train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																			   test_data_transformed, map_calgari,
+																			   columname, token_list)
 
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, map_calgari_words, 'calgarimatches_exact_match', calgari_tokens)
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, map_calgari_words,
+																		   'calgarimatches_exact_match', calgari_tokens)
 
 	unique_token_list = unique_tokens(train_data)
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_BE', unique_token_list['BE'])
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_BS', unique_token_list['BS'])
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_LU', unique_token_list['LU'])
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_unique_tokens, 'unique_ZH', unique_token_list['ZH'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, apply_unique_tokens,
+																		   'unique_BE', unique_token_list['BE'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, apply_unique_tokens,
+																		   'unique_BS', unique_token_list['BS'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, apply_unique_tokens,
+																		   'unique_LU', unique_token_list['LU'])
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, apply_unique_tokens,
+																		   'unique_ZH', unique_token_list['ZH'])
 
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, average_word_length, 'averagewordlength', function_argument=None)
+	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed,
+																		   test_data_transformed, average_word_length,
+																		   'averagewordlength', function_argument=None)
 
 	bigrams = list_of_bigrams(train_data)
 	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BE', function_argument=bigrams['BE'])
@@ -907,32 +833,33 @@ def main():
 	# Classify
 	print('...classification started')
 	# test_data = test_data.rename({' Text':'Text'})
-	predictions = classify(train_data_transformed, test_data_transformed,resultfile)
+	predictions = classify(train_data_transformed, test_data_transformed, resultfile)
 
 	print('...writing results')
 
 	write_scores(resultfile, predictions)
 	print('done!')
 
-	# Perform grid search for a given transformer
-	# grid_search(
-	# 	transformer = [
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
-	# 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
-	# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
-	# 	],
-	# 	train_data=train_data_transformed,
-	# 	param_grid={
-	# 		'solver': ['adam', 'lbfgs'],
-	# 		'activation': ['logistic', 'relu']
-	# 	},
-	# 	estimator=MLPClassifier()
-	# )
+
+# Perform grid search for a given transformer
+# grid_search(
+# 	transformer = [
+# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgari', 'calgarimatches_exact_match'),
+# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words', 'Text'),
+# 		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars', 'Text'),
+# 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaribimatches', 'calgaribimatches'),
+# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaritrimatches', 'calgaritrimatches'),
+# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifourmatches', 'calgarifourmatches'),
+# 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarifivematches', 'calgarifivematches')
+# 	],
+# 	train_data=train_data_transformed,
+# 	param_grid={
+# 		'solver': ['adam', 'lbfgs'],
+# 		'activation': ['logistic', 'relu']
+# 	},
+# 	estimator=MLPClassifier()
+# )
 
 if __name__ == '__main__':
 	main()
