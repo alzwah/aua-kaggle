@@ -58,7 +58,7 @@ trainfile = arguments.trainfile
 testfile = arguments.testfile
 resultfile = arguments.resultfile
 
-
+#https://stackoverflow.com/questions/34710281/use-featureunion-in-scikit-learn-to-combine-two-pandas-columns-for-tfidf
 class DataFrameColumnExtracter(TransformerMixin):
 	def __init__(self, column):
 		self.column = column
@@ -156,7 +156,7 @@ def calgary(data_in):
 	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
-			# lol sorry für ds statement
+		
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
 			oberer_bruch = max(
 				(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
@@ -214,7 +214,7 @@ def calgary_ngram(data_in, ngram):
 	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
-			# lol sorry für ds statement
+			
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
 			oberer_bruch = max(
 				(get_term_freq_per_cat(term_freq_per_category, 'BE', tok) / term_count_per_category['BE']),
@@ -470,7 +470,7 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 	return train_data_transformed, test_data_transformed
 
 
-def classify(train_data, test_data):
+def classify(train_data, test_data,resultfile):
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer_all = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
@@ -492,17 +492,11 @@ def classify(train_data, test_data):
 		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
 
-	# (subpipeline_name, Pipeline([
-	# 	('selector', DataFrameColumnExtracter(columname)),
-	# 	(name, vectorizer)]))
-
 	transformer_calgari = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
-						   'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
-						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words','Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars','Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),
@@ -513,10 +507,8 @@ def classify(train_data, test_data):
 	transformer_unique = [ # To test changes to transformer
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
 		# create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_averagewordlength', 'averagewordlength'), # Seems to be noise
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words',
-						   'Text'),
-		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars',
-						   'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='word', ngram_range=(1, 1)), 'subpipeline_text_words','Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(analyzer='char', ngram_range=(1, 1)), 'subpipeline_text_chars','Text'),
 		# create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BE', 'unique_BE'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
@@ -560,11 +552,6 @@ def classify(train_data, test_data):
 	# 	('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	# ])
 	#
-	pipeline_Multinomial2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_all)),
-		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
-	])
-	#
 	# pipeline_KNeighbors = Pipeline([
 	# 		('union', FeatureUnion(transformer_list = transformer_all)),
 	# 		('clf', KNeighborsClassifier(n_neighbors = 15))
@@ -574,6 +561,7 @@ def classify(train_data, test_data):
 	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
 	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
 	# ])
+	#
 	# pipeline_MLP2 = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
 	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300, alpha=9.9999999999999995e-07))
@@ -596,10 +584,6 @@ def classify(train_data, test_data):
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
 	# 	('clf', BernoulliNB())
 	# ])
-	# pipeline_bernoulliNB2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_calgari)),
-	# 	('clf', BernoulliNB())
-	# ])
 	#
 	# pipeline_one_v_one = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
@@ -609,6 +593,7 @@ def classify(train_data, test_data):
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
 	# 	('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
 	# ])
+	#
 	# pipeline_decision_tree = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
 	# 	('clf', DecisionTreeClassifier(max_features=0.8))
@@ -622,10 +607,6 @@ def classify(train_data, test_data):
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
 	# 	('clf', LinearSVC())
 	# ])
-	# pipeline_linear_svc2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
-	# 	('clf', LinearSVC())
-	# ])
 	#
 	# pipeline_logistic_regression = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
@@ -635,17 +616,9 @@ def classify(train_data, test_data):
 	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
 	# 	('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
 	# ])
-	# pipeline_sgd_classifier2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_calgari)),
-	# 	('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
-	# ])
 	#
 	# pipeline_passive_agressive = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
-	# 	('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
-	# ])
-	# pipeline_passive_agressive2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
 	# 	('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
 	# ])
 	#
@@ -672,7 +645,7 @@ def classify(train_data, test_data):
 	# 		base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
 	# 	))
 	# ])
-	#
+	
 	pipeline_voting_classifier_hard = Pipeline([
 	 	('union', FeatureUnion(transformer_list=transformer_all)),
 	 	#('select_features',SelectKBest(k=10000)),
@@ -680,33 +653,22 @@ def classify(train_data, test_data):
 	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_4',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_5',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_6',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_7',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_8',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 	 		('Linear SVC', LinearSVC()),
 	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
 	 	], voting='hard', n_jobs=-1)
 	 	 )
 	 ])
-	#
-	# pipeline_voting_classifier_meta = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', VotingClassifier(estimators=[
-	# 		VotingClassifier(estimators=[
-	# 			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	# 			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-	# 		], voting='soft', weights=[1.5, 1], n_jobs=-1),
-	# 		('Linear SVC', LinearSVC()),
-	# 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
-	# 	], voting='hard', n_jobs=-1)
-	# 	)
-	# ])
+
 
 	# Evaluate pipelines
 	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
-	# evaluate(train_data, pipeline_MLP2, 'MLP2')
-	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
-	#
 	# evaluate(train_data, pipeline_ridge, 'Ridge')
 	# evaluate(train_data, pipeline_ridge_cv, 'RidgeCV')
 	# evaluate(train_data, pipeline_nearest_centroid, 'NearestCentroid')
@@ -727,33 +689,34 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
-	predictions = evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
-	# evaluate(train_data, pipeline_voting_classifier_meta, 'Voting meta')
+	# evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
+	
 
 
-	#train_text = train_data['Text'].values
-	#train_y = train_data['Label'].values
+	# train_text = train_data['Text'].values
+	# train_y = train_data['Label'].values
 	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
-	#test_text = test_data['Text'].values
+	test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
 	pipeline = pipeline_voting_classifier_hard
-	# train_y = train_data['Label'].values.astype(str)
-	# train_text = train_data
+	train_y = train_data['Label'].values.astype(str)
+	train_text = train_data
 	#
 	# test_text = test_data
 	#
-	# pipeline.fit(train_data_transformed,t)
-	# predictions = pipeline.predict(test_text)
+	pipeline.fit(train_data,train_y)
+	predictions = pipeline.predict(test_text)
 	# print(predictions)
 	#
 	# for i in range(0,len(predictions)):
 	# 	print(predictions[i], test_text['Text'].iloc[i])
-
+	write_scores(resultfile, predictions)
 
 	return predictions
 
+# function to evaluate only on train set
 def evaluate(train_data, pipeline, name: str):
 
 	print(name+ ':')
@@ -776,14 +739,14 @@ def evaluate(train_data, pipeline, name: str):
 		accuracy = accuracy_score(test_y, prediction)
 		print('\t'+str(accuracy))
 		sum += accuracy
-		write_scores(prediction,'results'+str(accuracy)+'.csv')
+		
 	print('Average:', sum/n_splits)
 
 
 
 	return prediction 
 
-
+# function to plot data to get a better idea of the features
 def visualize(train_data):
 	print('... Adding plots.')
 
@@ -869,22 +832,24 @@ def main():
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, average_word_length, 'averagewordlength', function_argument=None)
 
 	bigrams = list_of_bigrams(train_data)
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BE', function_argument=bigrams['BE'])
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BS', function_argument=bigrams['BS'])
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_LU', function_argument=bigrams['LU'])
-	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_ZH', function_argument=bigrams['ZH'])
-	train_data_transformed['bigram_frequency_ZH'].values.astype(str)
+	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BE', function_argument=bigrams['BE'])
+	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BS', function_argument=bigrams['BS'])
+	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_LU', function_argument=bigrams['LU'])
+	# train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_ZH', function_argument=bigrams['ZH'])
 	print('Done adding features.')
 
 	# Print subset of features to console
-	print_features(train_data_transformed, test_data_transformed)
+	# print_features(train_data_transformed, test_data_transformed)
 	#print(type(train_data_transformed['bigram_frequency_ZH'][1]))
 
 	# Create plots for train data
 	# visualize(train_data_transformed)
 
 	# Classify
-	predictions = classify(train_data_transformed, test_data_transformed)
+	print('...classification started')
+	predictions = classify(train_data_transformed, test_data,resultfile)
+
+	print('...writing results')
 
 	write_scores(resultfile, predictions)
 
