@@ -150,7 +150,6 @@ def calgari(data_in: pd.DataFrame) -> list:
 	# structure: [(calgari value, tok)]
 	output = []
 
-	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
@@ -211,7 +210,6 @@ def calgari_ngram(data_in: pd.DataFrame, ngram: int) -> list:
 	# structure: [(calgari value, tok)]
 	output = []
 
-	print(term_count_per_category)
 	for tok, freq in term_freq.items():
 		if freq > 2:
 			# max(probability t given category: termfrequency in category/total amount of terms in category)
