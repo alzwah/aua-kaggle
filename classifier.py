@@ -271,7 +271,7 @@ def get_bigram_frequency_list(sentence):
 def apply_bigram_frequency(sentence, bigram_list):
 	sentence_bigrams = get_bigram_frequency_list(sentence)
 	if len(sentence_bigrams) == 0:
-		return 0
+		return "0"
 	out_of_place = 0
 	max_value = len(bigram_list)
 	max_index = len(bigram_list)
@@ -288,7 +288,10 @@ def apply_bigram_frequency(sentence, bigram_list):
 		if not found:
 			out_of_place += max_value
 
-	return str(out_of_place/len(sentence))
+	result = out_of_place/len(sentence)
+	#print(result,(type(result)))
+	
+	return str(result)
 
 
 # returns a list of tokens that only appear in one category
@@ -519,7 +522,7 @@ def classify(train_data, test_data):
 	transformer_dial_big = [
 		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
 		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
-		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals_2', 'Text'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
@@ -646,16 +649,16 @@ def classify(train_data, test_data):
 	# 	))
 	# ])
 	#
-	# pipeline_voting_classifier_hard = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', VotingClassifier(estimators=[
-	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-	# 		('Linear SVC', LinearSVC()),
-	# 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
-	# 	], voting='hard', n_jobs=-1)
-	# 	 )
-	# ])
+	pipeline_voting_classifier_hard = Pipeline([
+	 	('union', FeatureUnion(transformer_list=transformer_dial_big)),
+	 	('clf', VotingClassifier(estimators=[
+	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+	 		('Linear SVC', LinearSVC()),
+	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
+	 	], voting='hard', n_jobs=-1)
+	 	 )
+	 ])
 	#
 	# pipeline_voting_classifier_meta = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
@@ -697,7 +700,7 @@ def classify(train_data, test_data):
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
 	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
 	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
-	# evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
+	evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
 	# evaluate(train_data, pipeline_voting_classifier_meta, 'Voting meta')
 
 
@@ -729,7 +732,7 @@ def evaluate(train_data, pipeline, name: str):
 	print(name+ ':')
 
 	sum = 0.0
-	n_splits = 7
+	n_splits = 3
 	k_fold = KFold(n_splits=n_splits)
 	for train_indices, test_indices in k_fold.split(train_data):
 		train_text = train_data.iloc[train_indices]
@@ -793,6 +796,7 @@ def print_features(train_data, test_data):
 	# print some of the topmost data to show created features and their values
 	print('Train data:')
 	print(train_data.head(30))
+
 	print("------")
 	print('Test data:')
 	print(test_data.head(30))
@@ -837,11 +841,12 @@ def main():
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_BS', function_argument=bigrams['BS'])
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_LU', function_argument=bigrams['LU'])
 	train_data_transformed, test_data_transformed = append_feature_columns(train_data_transformed, test_data_transformed, apply_bigram_frequency, 'bigram_frequency_ZH', function_argument=bigrams['ZH'])
-
+	train_data_transformed['bigram_frequency_ZH'].values.astype(str)
 	print('Done adding features.')
 
 	# Print subset of features to console
-	# print_features(train_data_transformed, test_data_transformed)
+	print_features(train_data_transformed, test_data_transformed)
+	#print(type(train_data_transformed['bigram_frequency_ZH'][1]))
 
 	# Create plots for train data
 	# visualize(train_data_transformed)
