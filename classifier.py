@@ -462,10 +462,10 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_BS', 'unique_BS'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_LU', 'unique_LU'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_unique_word_matches_ZH', 'unique_ZH'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
-		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
+		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
+		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
+		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
+		#create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
 
 	# (subpipeline_name, Pipeline([
@@ -537,7 +537,7 @@ def classify(train_data, test_data):
 	# ])
 	#
 	pipeline_Multinomial2 = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer_dial_big)),
+		('union', FeatureUnion(transformer_list=transformer_all)),
 		('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
 	])
 	#
@@ -650,9 +650,11 @@ def classify(train_data, test_data):
 	# ])
 	#
 	pipeline_voting_classifier_hard = Pipeline([
-	 	('union', FeatureUnion(transformer_list=transformer_dial_big)),
+	 	('union', FeatureUnion(transformer_list=transformer_all)),
 	 	('clf', VotingClassifier(estimators=[
 	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_3',MultinomialNB(alpha=0.1, class_prior=None, fit_prior=True)),
 	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 	 		('Linear SVC', LinearSVC()),
 	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
