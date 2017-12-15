@@ -515,6 +515,17 @@ def classify(train_data, test_data):
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'),
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')
 	]
+	
+	transformer_dial_big = [
+		create_subpipeline('tfidf', CountVectorizer(ngram_range=(2,2), analyzer='char'), 'subpipeline_char_n_grams', 'Text'),
+		create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2), analyzer='char'), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('count_vec', CountVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2, 2)), 'subpipeline_countvocals', 'Text'),
+		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BE', 'bigram_frequency_BE'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_BS', 'bigram_frequency_BS'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
+		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
+	]
 
 	# Preparing potential pipelines
 	# pipeline_Multinomial = Pipeline([
