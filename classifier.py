@@ -400,7 +400,12 @@ def apply_unique_tokens(sentence: str, word_list: list) -> str:
 
 
 #returns a list of tokens that appear in 3/4 of categories (e.g. appear in BS and LU and ZH but NOT BE)
-def unique_missing_tokens(data_in):
+def unique_missing_tokens(data_in: pd.DataFrame) -> list:
+    '''
+    Collects all the tokens that are present in 3 out of 4 categories
+    :param data_in: Dataframe containing the text and its label 
+    :return: List of tokens that are only NOT present in one category
+    '''
     # contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
     # build dict {category: [tokens]}
@@ -415,13 +420,9 @@ def unique_missing_tokens(data_in):
 	ZH = set(category_tokens['ZH'])
 	
 	missing_tokens = []
-	print((BE)-(BS & LU & ZH))
 	missing_tokens.extend(list((BE)-(BS & LU & ZH)))
-	print((BS)-(BE & LU & ZH))
 	missing_tokens.extend(list((BS) -(BE & LU & ZH)))
-	print((LU)-(BS & BE & ZH))
 	missing_tokens.extend(list((LU) - (BE & BS & ZH)))
-	print((ZH)-(BS & LU & BE))
 	missing_tokens.extend(list((ZH) - (BE & BS & LU)))
 	
 	return missing_tokens
@@ -511,7 +512,14 @@ def append_feature_columns(train_data_transformed, test_data_transformed, functi
 	return train_data_transformed, test_data_transformed
 
 
-def classify(train_data, test_data,resultfile):
+def classify(train_data: pd.DataFrame, test_data: pd.DataFrame,resultfile: str):
+    '''
+    Classifies with feature pipelines and returns predictions
+    :param train_data: Training dataframe containing the text and its label 
+    :param test_data: Test dataframe containing the text and its label 
+    :param resultfile: string pointing to the CSV file where the results will be written
+    :return: list of predictions
+    '''
 	# transformer for feature union, thanks to data frame column extractor it can be applied to a column of the dataframe
 	transformer_all = [
 		create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgary', 'calgarymatches_exact_match'),
@@ -587,82 +595,7 @@ def classify(train_data, test_data,resultfile):
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
 
-	# Preparing potential pipelines
-	# pipeline_Multinomial = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True))
-	# ])
-	#
-	# pipeline_KNeighbors = Pipeline([
-	# 		('union', FeatureUnion(transformer_list = transformer_all)),
-	# 		('clf', KNeighborsClassifier(n_neighbors = 15))
-	# 		])
-	#
-	# pipeline_MLP = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
-	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300))
-	# ])
-	#
-	# pipeline_MLP2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_mlp)),
-	# 	('clf', MLPClassifier(solver='adam', activation='logistic', max_iter=300, alpha=9.9999999999999995e-07))
-	# ])
-	#
-	# pipeline_ridge = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', RidgeClassifier())
-	# ])
-	#
-	# pipeline_ridge_cv = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', RidgeClassifierCV())
-	# ])
-	# pipeline_nearest_centroid = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', NearestCentroid())
-	# ])
-	# pipeline_bernoulliNB = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', BernoulliNB())
-	# ])
-	#
-	# pipeline_one_v_one = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', OneVsOneClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
-	# ])
-	# pipeline_one_v_rest = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', OneVsRestClassifier(estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)))
-	# ])
-	#
-	# pipeline_decision_tree = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', DecisionTreeClassifier(max_features=0.8))
-	# ])
-	#
-	# pipeline_svc = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', SVC())
-	# ])
-	# pipeline_linear_svc = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', LinearSVC())
-	# ])
-	#
-	# pipeline_logistic_regression = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', LogisticRegression())
-	# ])
-	# pipeline_sgd_classifier = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
-	# 	('clf', SGDClassifier(max_iter=5, loss='log', n_jobs=-1))
-	# ])
-	#
-	# pipeline_passive_agressive = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_unique)),
-	# 	('clf', PassiveAggressiveClassifier(max_iter=5, average=True))
-	# ])
-	#
+
 	# pipeline_voting_classifier = Pipeline([
 	# 	('union', FeatureUnion(transformer_list=transformer_all)),
 	# 	('clf', VotingClassifier(estimators=[
@@ -670,22 +603,10 @@ def classify(train_data, test_data,resultfile):
 	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 	# 		], voting='soft', weights=[1.5, 1], n_jobs=-1)
 	# 	)
-	# ])
-	# pipeline_voting_classifier2 = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', VotingClassifier(estimators=[
-	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300,  alpha=9.9999999999999995e-07)),
-	# 		], voting='soft', weights=[2, 1], n_jobs=-1)
-	# 	)
-	# ])
-	#
-	# pipeline_ada_boost_classifier = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', AdaBoostClassifier(
-	# 		base_estimator=MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)
-	# 	))
-	# ])
+
+	
+	
+
 	
 	pipeline_voting_classifier_hard = Pipeline([
 	 	('union', FeatureUnion(transformer_list=transformer_all)),
@@ -708,37 +629,9 @@ def classify(train_data, test_data,resultfile):
 
 
 	# Evaluate pipelines
-	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	# evaluate(train_data, pipeline_MLP, 'MLP')
-	# evaluate(train_data, pipeline_ridge, 'Ridge')
-	# evaluate(train_data, pipeline_ridge_cv, 'RidgeCV')
-	# evaluate(train_data, pipeline_nearest_centroid, 'NearestCentroid')
-	# evaluate(train_data, pipeline_nearest_centroid_2, 'NearestCentroid')
-	# evaluate(train_data, pipeline_bernoulliNB, 'BernoulliNB')
-	# evaluate(train_data, pipeline_bernoulliNB2, 'BernoulliNB')
-	# evaluate(train_data, pipeline_one_v_one, 'One v. one, chosen estimator MultinomialNB')
-	# evaluate(train_data, pipeline_one_v_rest, 'One v. rest, chosen estimator MultinomialNB')
-	# evaluate(train_data, pipeline_decision_tree, 'Decision tree') # ca. 62%
-	# evaluate(train_data, pipeline_svc, 'SVC') # ca. 26%
-	# evaluate(train_data, pipeline_linear_svc, 'Linear SVC')
-	# evaluate(train_data, pipeline_linear_svc2, 'Linear SVC')
-	# evaluate(train_data, pipeline_logistic_regression, 'Logistic regression')
-	# evaluate(train_data, pipeline_sgd_classifier, 'SGD')
-	# evaluate(train_data, pipeline_sgd_classifier2, 'SGD')
-	# evaluate(train_data, pipeline_passive_agressive, 'Passive agressive')
-	# evaluate(train_data, pipeline_passive_agressive2, 'Passive agressive')
 	# evaluate(train_data, pipeline_voting_classifier, 'Voting classifier')
-	# evaluate(train_data, pipeline_voting_classifier2, 'Voting classifier 2')
-	# evaluate(train_data, pipeline_ada_boost_classifier, 'Ada')
 	# evaluate(train_data, pipeline_voting_classifier_hard, 'Voting hard')
-	
-
-
-	# train_text = train_data['Text'].values
-	# train_y = train_data['Label'].values
-	#print(test_data)
-	#im test file von der web site hat es einen whitespace vor 'Text'
-	# test_text = test_data['Text'].values
+	s
 
 	#UM MIT TESTDATA ZU ARBEITEN:
 	pipeline = pipeline_voting_classifier_hard
