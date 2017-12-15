@@ -651,13 +651,13 @@ def classify(train_data, test_data,resultfile):
 	 	#('select_features',SelectKBest(k=10000)),
 	 	('clf', VotingClassifier(estimators=[
 	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_4',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_5',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_6',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_7',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_8',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_4',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_5',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_6',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_7',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		#('MultinomialNB_8',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 	 		('Linear SVC', LinearSVC()),
 	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
@@ -697,16 +697,17 @@ def classify(train_data, test_data,resultfile):
 	# train_y = train_data['Label'].values
 	#print(test_data)
 	#im test file von der web site hat es einen whitespace vor 'Text'
-	test_text = test_data['Text'].values
+	# test_text = test_data['Text'].values
 
 	#UM MIT TESTDATA ZU ARBEITEN:
 	pipeline = pipeline_voting_classifier_hard
 	train_y = train_data['Label'].values.astype(str)
 	train_text = train_data
-	#
-	# test_text = test_data
-	#
+	
+	test_text = test_data
+	print('...fitting')
 	pipeline.fit(train_data,train_y)
+	print('...predicting')
 	predictions = pipeline.predict(test_text)
 	# print(predictions)
 	#
@@ -840,18 +841,19 @@ def main():
 
 	# Print subset of features to console
 	# print_features(train_data_transformed, test_data_transformed)
-	#print(type(train_data_transformed['bigram_frequency_ZH'][1]))
 
 	# Create plots for train data
 	# visualize(train_data_transformed)
 
 	# Classify
 	print('...classification started')
+	test_data = test_data.rename({' Text':'Text'})
 	predictions = classify(train_data_transformed, test_data,resultfile)
 
 	print('...writing results')
 
 	write_scores(resultfile, predictions)
+	print('done!')
 
 	# Perform grid search for a given transformer
 	# grid_search(
