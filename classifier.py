@@ -675,7 +675,7 @@ def classify(train_data, test_data):
 
 	# Evaluate pipelines
 	# evaluate(train_data, pipeline_Multinomial, 'MultinomialNB')
-	evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
+	# evaluate(train_data, pipeline_Multinomial2, 'MultinomialNB2')
 	# evaluate(train_data, pipeline_MLP, 'MLP')
 	# evaluate(train_data, pipeline_MLP2, 'MLP2')
 	# evaluate(train_data, pipeline_KNeighbors, 'KNN')
@@ -732,7 +732,7 @@ def evaluate(train_data, pipeline, name: str):
 	print(name+ ':')
 
 	sum = 0.0
-	n_splits = 3
+	n_splits = 7
 	k_fold = KFold(n_splits=n_splits)
 	for train_indices, test_indices in k_fold.split(train_data):
 		train_text = train_data.iloc[train_indices]
