@@ -679,7 +679,7 @@ def classify(train_data, test_data):
 	 	('clf', VotingClassifier(estimators=[
 	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		('MultinomialNB_3',MultinomialNB(alpha=0.1, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 	 		('Linear SVC', LinearSVC()),
 	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
@@ -759,7 +759,7 @@ def evaluate(train_data, pipeline, name: str):
 	print(name+ ':')
 
 	sum = 0.0
-	n_splits = 2
+	n_splits = 7
 	k_fold = KFold(n_splits=n_splits)
 	for train_indices, test_indices in k_fold.split(train_data):
 		train_text = train_data.iloc[train_indices]
@@ -776,7 +776,10 @@ def evaluate(train_data, pipeline, name: str):
 		accuracy = accuracy_score(test_y, prediction)
 		print('\t'+str(accuracy))
 		sum += accuracy
+		write_scores(prediction,'results'+str(accuracy)+'.csv')
 	print('Average:', sum/n_splits)
+
+
 
 	return prediction 
 
