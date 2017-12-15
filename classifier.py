@@ -607,16 +607,24 @@ def classify(train_data: pd.DataFrame, test_data: pd.DataFrame,resultfile: str):
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_LU', 'bigram_frequency_LU'),
 		create_subpipeline('count_vec', CountVectorizer(), 'subpipeline_bigram_frequency_ZH', 'bigram_frequency_ZH')
 	]
-
-
-	# pipeline_voting_classifier = Pipeline([
-	# 	('union', FeatureUnion(transformer_list=transformer_all)),
-	# 	('clf', VotingClassifier(estimators=[
-	# 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	# 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
-	# 		], voting='soft', weights=[1.5, 1], n_jobs=-1)
-	# 	)
-
+	
+	transformer = [	
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_text', 'Text'), 
+	create_subpipeline('count_vec', TfidfVectorizer(vocabulary=get_list_of_double_vocals(), ngram_range=(2,2), analyzer='char'), 'subpipeline_countvocals', 'Text'), 
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarybimatches', 'calgarybimatches'),	
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgarytrimatches', 'calgarytrimatches'),	
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfourmatches', 'calgaryfourmatches'), 
+	create_subpipeline('tfidf', TfidfVectorizer(), 'subpipeline_calgaryfivematches', 'calgaryfivematches')	]
+	
+	
+	
+	
+	pipeline_voting_classifier = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('clf', VotingClassifier(estimators=[
+			('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+			('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
+			], voting='soft', weights=[1.5, 1], n_jobs=-1)
 	
 	
 
@@ -652,15 +660,21 @@ def classify(train_data: pd.DataFrame, test_data: pd.DataFrame,resultfile: str):
 	train_text = train_data
 	
 	test_text = test_data
-	print('...fitting')
+	print('...fitting 1')
 	pipeline.fit(train_data,train_y)
-	print('...predicting')
+	print('...predicting 1')
 	predictions = pipeline.predict(test_text)
-	# print(predictions)
-	#
-	# for i in range(0,len(predictions)):
-	# 	print(predictions[i], test_text['Text'].iloc[i])
-	write_scores(resultfile, predictions)
+
+	write_scores(resultfile+'hard.csv', predictions)
+
+	# write the result file for the second submission
+	pipeline = pipeline_voting_classifier
+	print('...fitting 2')
+	pipeline.fit(train_data,train_y)
+	print('...predicting 2')
+	predictions = pipeline.predict(test_text)
+
+	write_scores(resultfile+'soft.csv',predictions)
 
 	return predictions
 
