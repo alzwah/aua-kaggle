@@ -12,8 +12,8 @@ import codecs
 from importlib import reload
 
 # Visualization
-import seaborn as sns
-import matplotlib.pyplot as plt
+#import seaborn as sns
+#import matplotlib.pyplot as plt
 
 # Basic scikit features
 from sklearn.base import TransformerMixin, BaseEstimator
@@ -651,13 +651,13 @@ def classify(train_data, test_data,resultfile):
 	 	#('select_features',SelectKBest(k=10000)),
 	 	('clf', VotingClassifier(estimators=[
 	 		('MultinomialNB', MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_4',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_5',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_6',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_7',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
-	 		#('MultinomialNB_8',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_2',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_3',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_4',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_5',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_6',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_7',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
+	 		('MultinomialNB_8',MultinomialNB(alpha=0.01, class_prior=None, fit_prior=True)),
 	 		('MLP', MLPClassifier(solver='adam', activation='logistic', max_iter=300)),
 	 		('Linear SVC', LinearSVC()),
 	 		('Passive agressive', PassiveAggressiveClassifier(max_iter=5, average=True))
@@ -847,8 +847,8 @@ def main():
 
 	# Classify
 	print('...classification started')
-	test_data = test_data.rename({' Text':'Text'})
-	predictions = classify(train_data_transformed, test_data,resultfile)
+	# test_data = test_data.rename({' Text':'Text'})
+	predictions = classify(train_data_transformed, test_data_transformed,resultfile)
 
 	print('...writing results')
 
