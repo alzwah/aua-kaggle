@@ -85,39 +85,37 @@ def write_scores(filename, predictions):
 		csv_writer = csv.writer(resultof, delimiter=",", lineterminator='\n')
 		csv_writer.writerow(['Id', 'Prediction'])
 		for id_, pred in predictions:
-			csv_writer.writerow([id_, pred.strip()])
+			csv_writer.writerow([id_, pred.strip()])	
+		
+		
+		
+		
+		
+		
+#############################HELPER METHODS###############################
 
-def grid_search(transformer, param_grid, train_data, estimator):
-	"""
-	Fine tune the parameters param_grid with regards to the model in pipeline.
-	Displays the possible parameters that can be used in param_grid when executed.
-	"""
-	# Example for parameters: { 'solver': ['adam', 'lbfgs'], 'activation': ['logistic', 'relu'] }
-	train_x = train_data.copy()
-	train_x.drop('Label', axis=1)
-	train_y = train_data.copy()['Label']
 
-	gs = GridSearchCV(
-		estimator=estimator,
-		param_grid=param_grid,
-		n_jobs=-1,
-		verbose=True
-	)
+def average_word_length(sentence_in):
+	""" Calculate the average word length in a sentence. """
+	sum = 0.0
+	count = 0
+	for word in sentence_in.split(sep=" "):
+		sum += len(word)
+		count += 1
+	return (sum / count)
 
-	print("[Grid search]Supported Parameters:")
-	print(gs.estimator.get_params().keys())
 
-	pipeline = Pipeline([
-		('union', FeatureUnion(transformer_list=transformer)),
-		('gs', gs)
-	])
-	pipeline.fit(train_x, train_y)
 
-	print("[Grid search] Cross validation finished.")
-	print("[Grid search] Best parameters:")
-	best_parameters = gs.best_estimator_.get_params()
-	for param_name in sorted(param_grid.keys()):
-		print("\t%s: %r" % (param_name, best_parameters[param_name]))
+
+def get_term_freq_per_cat(dict, cat, token):
+	if (cat, token) in dict.keys():
+		return dict[(cat, token)]
+	else:
+		return 0
+
+
+
+#############################CALGARY###############################
 
 
 # takes panda dataframe
@@ -232,6 +230,28 @@ def calgary_ngram(data_in, ngram):
 	return ([tok for val, tok in sorted_output[:199]])
 
 
+# takes sentence and calgary-list and returns all the substrings that match character sequences from the list
+def map_calgary(sentence, c_list):
+	output = []
+	for tok in c_list:
+		if re.search(tok, sentence):
+			output.append(tok)
+
+	return (" ").join(output)
+
+# takes sentence and calgary-list and returns all the words that match words from the list
+def map_calgary_words(sentence, c_list):
+	output = []
+	for tok in c_list:
+		if re.search('(\W'+tok+'\W|^'+tok+'\W|\W'+tok+'$)', sentence):
+			output.append(tok)
+	return (" ").join(output)
+	
+	
+#############################BIGRAMS###############################
+
+
+
 def list_of_bigrams(data_in):
 	# contains tuples of the form (category, sentence)
 	category_text = [(c, s) for c, s in zip(data_in['Label'].values, data_in['Text'].values)]
@@ -292,7 +312,19 @@ def apply_bigram_frequency(sentence, bigram_list):
 	#print(result,(type(result)))
 	
 	return str(result)
+	
+	
+def get_list_of_double_vocals():
+	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
+	double_vocals = []
+	for char1 in single_vocals:
+		for char2 in single_vocals:
+			double_vocals.append(''+char1+char2)
+	return double_vocals
 
+
+
+#############################UNIQUE TOKENS PER CATEGORY###############################
 
 # returns a list of tokens that only appear in one category
 def unique_tokens(data_in):
@@ -308,7 +340,6 @@ def unique_tokens(data_in):
 	BS = set(category_tokens['BS'])
 	LU = set(category_tokens['LU'])
 	ZH = set(category_tokens['ZH'])
-
 	return {'BE': (BE - BS - LU - ZH), 'BS': (BS - BE - LU - ZH), 'LU': (LU - BE - BS - ZH), 'ZH': (ZH - BE - BS - LU)}
 
 
@@ -355,48 +386,41 @@ def unique_missing_tokens(data_in):
 	return missing_tokens
 	
 
-def average_word_length(sentence_in):
-	""" Calculate the average word length in a sentence. """
-	sum = 0.0
-	count = 0
-	for word in sentence_in.split(sep=" "):
-		sum += len(word)
-		count += 1
-	return (sum / count)
+
+#############################PROCESSING###############################
 
 
-def get_list_of_double_vocals():
-	single_vocals = ['ö','ä','ü','ì','ò','è','a','e','i','o','u']
-	double_vocals = []
-	for char1 in single_vocals:
-		for char2 in single_vocals:
-			double_vocals.append(''+char1+char2)
-	return double_vocals
+def grid_search(transformer, param_grid, train_data, estimator):
+	"""
+	Fine tune the parameters param_grid with regards to the model in pipeline.
+	Displays the possible parameters that can be used in param_grid when executed.
+	"""
+	# Example for parameters: { 'solver': ['adam', 'lbfgs'], 'activation': ['logistic', 'relu'] }
+	train_x = train_data.copy()
+	train_x.drop('Label', axis=1)
+	train_y = train_data.copy()['Label']
 
+	gs = GridSearchCV(
+		estimator=estimator,
+		param_grid=param_grid,
+		n_jobs=-1,
+		verbose=True
+	)
 
-def get_term_freq_per_cat(dict, cat, token):
-	if (cat, token) in dict.keys():
-		return dict[(cat, token)]
-	else:
-		return 0
+	print("[Grid search]Supported Parameters:")
+	print(gs.estimator.get_params().keys())
 
+	pipeline = Pipeline([
+		('union', FeatureUnion(transformer_list=transformer)),
+		('gs', gs)
+	])
+	pipeline.fit(train_x, train_y)
 
-# takes sentence and calgary-list and returns all the substrings that match character sequences from the list
-def map_calgary(sentence, c_list):
-	output = []
-	for tok in c_list:
-		if re.search(tok, sentence):
-			output.append(tok)
-
-	return (" ").join(output)
-
-# takes sentence and calgary-list and returns all the words that match words from the list
-def map_calgary_words(sentence, c_list):
-	output = []
-	for tok in c_list:
-		if re.search('(\W'+tok+'\W|^'+tok+'\W|\W'+tok+'$)', sentence):
-			output.append(tok)
-	return (" ").join(output)
+	print("[Grid search] Cross validation finished.")
+	print("[Grid search] Best parameters:")
+	best_parameters = gs.best_estimator_.get_params()
+	for param_name in sorted(param_grid.keys()):
+		print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
 
 # function that creates subpipelines for transformer
